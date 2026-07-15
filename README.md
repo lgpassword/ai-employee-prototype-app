@@ -89,8 +89,14 @@ Merchant / 商户用户: merchant / merchant123
 ├── .github/
 │   ├── CODEOWNERS
 │   └── pull_request_template.md
+├── .planning/
+│   ├── PROJECT.md
+│   ├── REQUIREMENTS.md
+│   ├── ROADMAP.md
+│   └── phases/
 ├── docs/
 │   ├── API_REFERENCE.md
+│   ├── AI_EMPLOYEE_MODIFICATION_GUIDE.md
 │   ├── CO_CREATION_INVITE.md
 │   ├── CODE_MAP.md
 │   └── GITHUB_RELEASE.md
@@ -101,6 +107,7 @@ Merchant / 商户用户: merchant / merchant123
 ├── src/
 │   ├── server.js
 │   ├── store.js
+│   ├── db/
 │   ├── modules/
 │   └── services/
 ├── .gitignore
@@ -113,6 +120,7 @@ Merchant / 商户用户: merchant / merchant123
 See:
 
 - `docs/CODE_MAP.md` for file-by-file responsibilities and flow descriptions.
+- `.planning/ROADMAP.md` for GSD phase planning based on the modification guide.
 - `docs/API_REFERENCE.md` for API and backend method mapping.
 - `docs/CO_CREATION_INVITE.md` for co-creation invitation, operation flow, modules, and contribution directions.
 - `docs/GITHUB_RELEASE.md` for GitHub publishing and branch protection.
@@ -120,6 +128,7 @@ See:
 文档说明：
 
 - `docs/CODE_MAP.md`：每个文件的作用和业务链路。
+- `.planning/ROADMAP.md`：基于修改指导文档拆分的 GSD 阶段规划。
 - `docs/API_REFERENCE.md`：接口与后端方法映射。
 - `docs/CO_CREATION_INVITE.md`：邀请共创、操作流程、业务链路、模块能力和共创方向。
 - `docs/GITHUB_RELEASE.md`：GitHub 上传和主分支保护。
@@ -143,9 +152,11 @@ Why:
 原因：
 
 - `node_modules/`: installed dependencies; restore with `npm install`.
-- `.local/`: local logs, OAuth cache, runtime data, possible secrets.
+- `.local/`: local logs, OAuth cache, runtime data, possible secrets. The transitional business snapshot is `.local/store.json`.
 - `public/generated/`: generated videos, audio, clips, storyboard artifacts.
 - `.env`: local API keys and secrets.
+
+当前过渡持久化层会在服务启动时读取 `.local/store.json`，并在 API 请求结束后保存业务状态。全局登录 `session` 不会写入快照。
 
 ## AI Provider Configuration / AI 供应商配置
 

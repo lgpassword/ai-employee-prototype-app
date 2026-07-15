@@ -1,0 +1,8 @@
+{
+  "project": "ai-employee-prototype-app",
+  "workflow": "gsd",
+  "tracker": "beads",
+  "sourceGuide": "docs/AI_EMPLOYEE_MODIFICATION_GUIDE.md",
+  "qualityGate": "npm run check",
+  "planningUpdatedAt": "2026-07-15"
+}

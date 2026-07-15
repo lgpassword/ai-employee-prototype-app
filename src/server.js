@@ -7,6 +7,7 @@ import { getDashboard } from "./modules/dashboard.js";
 import { importContent, listContents, searchLatestContents } from "./modules/content.js";
 import { adoptSuggestion, buildAutoReplySuggestion, findConversation, getPlatformMessagingStatus, listConversations, receivePlatformMessage, sendPlatformReply, sendReply, updateCustomerProfile } from "./modules/messages.js";
 import { createVideoDraft, listGeneratedVideos, renderVideoWithVoice } from "./modules/video.js";
+import { getPersistenceStatus, loadPersistentStore, savePersistentStore } from "./db/json-store.js";
 import { getLiveDashboard } from "./modules/live.js";
 import { getSalesDashboard } from "./modules/sales.js";
 import { getSettings, saveCustomerAiSettings, saveKnowledgeBase, saveTextProviderSettings, saveVideoProviderSettings, saveVoiceProviderSettings } from "./modules/settings.js";
@@ -74,6 +75,10 @@ function loadLocalEnv() {
 
 loadLocalEnv();
 
+/** 服务启动时加载本地业务快照，作为正式数据库前的过渡持久化层。 */
+const persistenceStartup = loadPersistentStore();
+console.log(`[persistence] ${persistenceStartup.message}`);
+
 /** Send a JSON response. / 返回 JSON 响应。 */
 function sendJson(res, status, payload) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
@@ -100,6 +105,19 @@ function readBody(req) {
 async function readJson(req) {
   const body = await readBody(req);
   return body.trim() ? JSON.parse(body) : {};
+}
+
+/** 为 API 请求绑定自动保存，覆盖现有模块中直接修改 store 的行为。 */
+function attachApiPersistence(url, res) {
+  if (!url.pathname.startsWith("/api/")) return;
+  res.on("finish", () => {
+    if (res.statusCode >= 500) return;
+    try {
+      savePersistentStore();
+    } catch (error) {
+      console.error("[persistence] 保存本地业务快照失败", error);
+    }
+  });
 }
 
 /** Serve frontend static files from `public/`. / 从 `public/` 返回前端静态文件。 */
@@ -131,6 +149,7 @@ function serveStatic(req, res) {
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
+    attachApiPersistence(url, res);
     const publicApiPaths = new Set(["/api/session", "/api/session/login", "/api/session/logout", "/api/platform-messaging/inbound"]);
     if (url.pathname.startsWith("/api/") && !publicApiPaths.has(url.pathname)) {
       assertActiveSession();
@@ -138,6 +157,10 @@ const server = createServer(async (req, res) => {
 
     if (req.method === "GET" && url.pathname === "/api/dashboard") {
       sendJson(res, 200, getDashboard());
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/api/system/persistence") {
+      sendJson(res, 200, { item: getPersistenceStatus() });
       return;
     }
     if (req.method === "GET" && url.pathname === "/api/session") {

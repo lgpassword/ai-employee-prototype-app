@@ -29,6 +29,12 @@ This document explains what each source file contains, what it does, and which b
 | `src/server.js` | HTTP server, static file serving, JSON helpers, API route dispatch. | Connects frontend requests to business modules. | All API flows, session guard, platform messaging routes. |
 | `src/store.js` | In-memory users, accounts, settings, conversations, dashboards, platform onboarding data. | Local data store for the prototype. | Session, quota, platform data, customer messages. |
 
+## Data Layer / 数据层
+
+| File | Contains | Role | Main Flow |
+| --- | --- | --- | --- |
+| `src/db/json-store.js` | Local JSON snapshot loader/saver, deep merge helper, persistence status. | Transitional persistence layer before SQLite/PostgreSQL repository migration. | Server startup loads `.local/store.json`; API responses save business state without persisting global session. |
+
 ## Backend Modules / 后端业务模块
 
 | File | Contains | Role | Main Flow |
@@ -73,7 +79,7 @@ This document explains what each source file contains, what it does, and which b
 
 ### 1. Login and Access / 登录与额度
 
-`public/app.js` -> `POST /api/session/login` -> `src/modules/onboarding.js` -> `src/store.js`
+`public/app.js` -> `POST /api/session/login` -> `src/modules/onboarding.js` -> `src/store.js` -> `src/db/json-store.js`
 
 ### 2. Content Search / 内容搜索
 
