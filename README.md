@@ -91,6 +91,7 @@ Merchant / 商户用户: merchant / merchant123
 │   └── pull_request_template.md
 ├── docs/
 │   ├── API_REFERENCE.md
+│   ├── CO_CREATION_INVITE.md
 │   ├── CODE_MAP.md
 │   └── GITHUB_RELEASE.md
 ├── public/
@@ -113,12 +114,14 @@ See:
 
 - `docs/CODE_MAP.md` for file-by-file responsibilities and flow descriptions.
 - `docs/API_REFERENCE.md` for API and backend method mapping.
+- `docs/CO_CREATION_INVITE.md` for co-creation invitation, operation flow, modules, and contribution directions.
 - `docs/GITHUB_RELEASE.md` for GitHub publishing and branch protection.
 
 文档说明：
 
 - `docs/CODE_MAP.md`：每个文件的作用和业务链路。
 - `docs/API_REFERENCE.md`：接口与后端方法映射。
+- `docs/CO_CREATION_INVITE.md`：邀请共创、操作流程、业务链路、模块能力和共创方向。
 - `docs/GITHUB_RELEASE.md`：GitHub 上传和主分支保护。
 
 ## Runtime Data / 运行数据
