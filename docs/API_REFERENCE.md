@@ -25,6 +25,9 @@
 | `GET` | `/api/videos` | `video.js` | List generated video tasks. |
 | `POST` | `/api/videos` | `video.js` | Generate editable script and storyboard. |
 | `POST` | `/api/videos/render` | `video.js` | Render video and voice. |
+| `GET` | `/api/videos/render-jobs` | `video.js` | List asynchronous video render jobs. |
+| `GET` | `/api/videos/render-jobs/:id` | `video.js` | Read one asynchronous video render job. |
+| `POST` | `/api/videos/render-jobs` | `video.js` | Queue asynchronous video rendering and return immediately. |
 | `POST` | `/api/scenarios/analyze` | `scenario-research.js` | Analyze product usage scenarios. |
 
 ## Customer Messaging / 客户消息

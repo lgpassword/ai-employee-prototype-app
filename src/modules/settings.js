@@ -6,8 +6,8 @@ export const videoProviderOptions = [
   { value: "aliyun-wanxiang", label: "阿里云百炼 / 通义万相", keyMode: "apiKey", defaultModel: "wan2.7-t2v-2026-06-12", models: ["wan2.7-t2v-2026-06-12", "wan2.7-t2v", "wan2.7-i2v-2026-04-25", "wan2.7-r2v-2026-06-12", "wan2.7-videoedit", "wan2.6-i2v", "wan2.6-i2v-flash", "wanx2.1-t2v-turbo", "wanx2.1-t2v-plus"], defaultSize: "1280x720" },
   { value: "aliyun-kling", label: "阿里云百炼 / 可灵 Kling", keyMode: "apiKey", defaultModel: "kling/kling-v3-video-generation", models: ["kling/kling-v3-video-generation", "kling/kling-v3-omni-video-generation"], defaultSize: "1280x720" },
   { value: "volcengine", label: "火山方舟 / 即梦 Seedance", keyMode: "apiKey", defaultModel: "doubao-seedance-1-0-pro-250528", models: ["doubao-seedance-1-0-pro-250528", "doubao-seedance-2-0-260128", "doubao-seedance-2-0-fast-260128", "doubao-seedance-2-0-mini-260615"], defaultSize: "1280x720", defaultEndpoint: "https://ark.cn-beijing.volces.com/api/v3" },
-  { value: "tencent-hunyuan", label: "腾讯云 TokenHub / 视频生成", keyMode: "aksk", defaultModel: "hy-video-1.5", models: ["hy-video-1.5", "yt-video-2.0", "yt-video-humanactor", "yt-video-fx", "kl-video-v3", "kl-video-v2-6", "kl-video-v2-5-turbo", "kl-video-v2-1-master", "kl-video-v2-1", "kl-video-v2-master", "kl-video-v1-6", "kl-video-v1-5", "kl-video-v1", "vd-video-q3-pro", "vd-video-q3-turbo", "vd-video-q2-pro", "vd-video-q2-pro-fast", "vd-video-q2-turbo", "vd-video-q2"], defaultSize: "1280x720" },
-  { value: "baidu-qianfan", label: "百度千帆 / AI 视频", keyMode: "aksk", defaultModel: "VQ3-Pro", models: ["VQ3-Pro", "VQ3-Turbo", "VQ2", "VQ2-Pro", "VQ2-Turbo"], defaultSize: "1280x720" }
+  { value: "tencent-hunyuan", label: "腾讯云 TokenHub / 视频生成", keyMode: "apiKey", defaultModel: "hy-video-1.5", models: ["hy-video-1.5", "yt-video-2.0", "yt-video-humanactor", "yt-video-fx", "kl-video-v3", "kl-video-v2-6", "kl-video-v2-5-turbo", "kl-video-v2-1-master", "kl-video-v2-1", "kl-video-v2-master", "kl-video-v1-6", "kl-video-v1-5", "kl-video-v1", "vd-video-q3-pro", "vd-video-q3-turbo", "vd-video-q2-pro", "vd-video-q2-pro-fast", "vd-video-q2-turbo", "vd-video-q2"], defaultSize: "1280x720", defaultEndpoint: "https://tokenhub.tencentmaas.com/v1/api/video" },
+  { value: "baidu-qianfan", label: "百度千帆 / AI 视频", keyMode: "apiKey", defaultModel: "qianfan-video-latest", models: ["qianfan-video-latest", "VQ3-Pro", "VQ3-Turbo", "VQ2-Pro", "VQ2-Turbo"], defaultSize: "1280x720", defaultEndpoint: "https://qianfan.baidubce.com" }
 ];
 
 export const textProviderOptions = [
@@ -316,16 +316,14 @@ export function getVideoProviderConfig() {
       size: process.env.VOLCENGINE_VIDEO_SIZE || option.defaultSize
     },
     "tencent-hunyuan": {
-      accessKey: process.env.TENCENT_SECRET_ID || "",
-      secretKey: process.env.TENCENT_SECRET_KEY || "",
-      endpoint: process.env.TENCENT_VIDEO_ENDPOINT || "",
+      apiKey: process.env.TENCENT_TOKENHUB_API_KEY || process.env.TENCENT_API_KEY || "",
+      endpoint: process.env.TENCENT_VIDEO_ENDPOINT || option.defaultEndpoint || "",
       model: process.env.TENCENT_VIDEO_MODEL || option.defaultModel,
       size: process.env.TENCENT_VIDEO_SIZE || option.defaultSize
     },
     "baidu-qianfan": {
-      accessKey: process.env.BAIDU_API_KEY || "",
-      secretKey: process.env.BAIDU_SECRET_KEY || "",
-      endpoint: process.env.BAIDU_VIDEO_ENDPOINT || "",
+      apiKey: process.env.BAIDU_QIANFAN_API_KEY || process.env.BAIDU_API_KEY || "",
+      endpoint: process.env.BAIDU_VIDEO_ENDPOINT || option.defaultEndpoint || "",
       model: process.env.BAIDU_VIDEO_MODEL || option.defaultModel,
       size: process.env.BAIDU_VIDEO_SIZE || option.defaultSize
     }

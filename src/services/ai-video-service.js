@@ -4,6 +4,8 @@ import { join } from "node:path";
 const defaultOpenaiBaseUrl = "https://api.openai.com/v1";
 const defaultAliyunBaseUrl = "https://dashscope.aliyuncs.com/api/v1";
 const defaultVolcengineBaseUrl = "https://ark.cn-beijing.volces.com/api/v3";
+const defaultTencentBaseUrl = "https://tokenhub.tencentmaas.com/v1/api/video";
+const defaultBaiduBaseUrl = "https://qianfan.baidubce.com";
 const pollMs = Number(process.env.AI_VIDEO_POLL_MS || process.env.OPENAI_VIDEO_POLL_MS || process.env.ALIYUN_VIDEO_POLL_MS || 5000);
 const maxWaitMs = Number(process.env.AI_VIDEO_MAX_WAIT_MS || process.env.OPENAI_VIDEO_MAX_WAIT_MS || process.env.ALIYUN_VIDEO_MAX_WAIT_MS || 600000);
 
@@ -27,6 +29,14 @@ function volcengineApiKey(providerConfig = {}) {
   return providerConfig.apiKey || process.env.VOLCENGINE_API_KEY || process.env.ARK_API_KEY || process.env.DOUBAO_API_KEY || "";
 }
 
+function tencentApiKey(providerConfig = {}) {
+  return providerConfig.apiKey || process.env.TENCENT_TOKENHUB_API_KEY || process.env.TENCENT_API_KEY || "";
+}
+
+function baiduApiKey(providerConfig = {}) {
+  return providerConfig.apiKey || process.env.BAIDU_QIANFAN_API_KEY || process.env.BAIDU_API_KEY || "";
+}
+
 function aliyunBaseUrl(providerConfig = {}) {
   const configuredEndpoint = providerConfig.endpoint || process.env.ALIYUN_VIDEO_ENDPOINT || process.env.DASHSCOPE_BASE_URL || defaultAliyunBaseUrl;
   let baseUrl = String(configuredEndpoint).trim().replace(/\/$/, "");
@@ -40,6 +50,20 @@ function volcengineBaseUrl(providerConfig = {}) {
   let baseUrl = String(configuredEndpoint).trim().replace(/\/$/, "");
   baseUrl = baseUrl.replace(/\/contents\/generations\/tasks\/?$/i, "");
   return /\/api\/v3$/i.test(baseUrl) ? baseUrl : `${baseUrl}/api/v3`;
+}
+
+function tencentBaseUrl(providerConfig = {}) {
+  const configuredEndpoint = providerConfig.endpoint || process.env.TENCENT_VIDEO_ENDPOINT || defaultTencentBaseUrl;
+  let baseUrl = String(configuredEndpoint).trim().replace(/\/$/, "");
+  baseUrl = baseUrl.replace(/\/(submit|query)$/i, "");
+  return /\/v1\/api\/video$/i.test(baseUrl) ? baseUrl : `${baseUrl}/v1/api/video`;
+}
+
+function baiduBaseUrl(providerConfig = {}) {
+  const configuredEndpoint = providerConfig.endpoint || process.env.BAIDU_VIDEO_ENDPOINT || defaultBaiduBaseUrl;
+  let baseUrl = String(configuredEndpoint).trim().replace(/\/$/, "");
+  baseUrl = baseUrl.replace(/\/beta\/video\/generations\/qianfan-video$/i, "");
+  return baseUrl;
 }
 
 function sleep(ms) {
@@ -88,6 +112,10 @@ function volcengineShotPrompt({ topic, script, shot }) {
     `镜头时长约 ${allowedSeconds(shot.duration)} 秒。`,
     "画面需要突出商品外观、使用场景、材质细节和购买欲，适合抖音/快手/小红书商品种草。"
   ].filter(Boolean).join("\n");
+}
+
+function baiduShotPrompt(args) {
+  return volcengineShotPrompt(args).slice(0, 1400);
 }
 
 async function openaiFetch(path, options = {}, providerConfig = {}) {
@@ -148,6 +176,37 @@ async function volcengineFetch(path, options = {}, providerConfig = {}) {
   const payload = parseJsonText(text);
   if (response.ok) return payload;
   throw new Error(payloadMessage(payload, `火山方舟视频接口请求失败: ${response.status}`));
+}
+
+async function tencentFetch(path, options = {}, providerConfig = {}) {
+  const response = await fetch(`${tencentBaseUrl(providerConfig)}${path}`, {
+    method: "POST",
+    ...options,
+    headers: {
+      authorization: `Bearer ${tencentApiKey(providerConfig)}`,
+      ...(options.body ? { "content-type": "application/json" } : {}),
+      ...(options.headers || {})
+    }
+  });
+  const text = await response.text().catch(() => "");
+  const payload = parseJsonText(text);
+  if (response.ok) return payload;
+  throw new Error(payloadMessage(payload, `腾讯 TokenHub 视频接口请求失败: ${response.status}`));
+}
+
+async function baiduFetch(path, options = {}, providerConfig = {}) {
+  const response = await fetch(`${baiduBaseUrl(providerConfig)}${path}`, {
+    ...options,
+    headers: {
+      authorization: `Bearer ${baiduApiKey(providerConfig)}`,
+      ...(options.body ? { "content-type": "application/json" } : {}),
+      ...(options.headers || {})
+    }
+  });
+  const text = await response.text().catch(() => "");
+  const payload = parseJsonText(text);
+  if (response.ok) return payload;
+  throw new Error(payloadMessage(payload, `百度千帆视频接口请求失败: ${response.status}`));
 }
 
 async function createVideoJob({ prompt, seconds, providerConfig }) {
@@ -229,6 +288,25 @@ function extractVolcengineVideoUrl(payload) {
     || "";
 }
 
+function extractTencentVideoUrl(payload) {
+  return payload?.data?.url
+    || payload?.data?.video_url
+    || payload?.url
+    || payload?.video_url
+    || payload?.output?.video_url
+    || "";
+}
+
+function extractBaiduVideoUrl(payload) {
+  const videos = payload?.data?.task_result?.videos || payload?.task_result?.videos || payload?.videos || [];
+  return payload?.content?.video_url
+    || payload?.data?.content?.video_url
+    || payload?.data?.video_url
+    || payload?.video_url
+    || videos?.[0]?.url
+    || "";
+}
+
 function videoAspectRatio(size = "1280x720") {
   const normalized = String(size).toLowerCase().replace("*", "x");
   if (normalized === "720x1280") return "9:16";
@@ -268,6 +346,16 @@ function aliyunWanxiangParameters({ model, seconds, size }) {
   return {
     ...common,
     size: legacyAliyunSize(size)
+  };
+}
+
+function aliyunKlingParameters({ seconds, size }) {
+  return {
+    mode: videoResolution(size) === "1080P" ? "pro" : "std",
+    aspect_ratio: videoAspectRatio(size),
+    duration: aliyunDuration(seconds),
+    audio: false,
+    watermark: false
   };
 }
 
@@ -315,6 +403,68 @@ async function createVolcengineVideoJob({ prompt, providerConfig }) {
   return { taskId, requestId: result.request_id || result?.data?.request_id || "" };
 }
 
+async function createAliyunKlingVideoJob({ prompt, seconds, providerConfig }) {
+  const model = providerConfig.model || process.env.ALIYUN_KLING_MODEL || "kling/kling-v3-video-generation";
+  const payload = {
+    model,
+    input: { prompt },
+    parameters: aliyunKlingParameters({
+      seconds,
+      size: providerConfig.size || process.env.ALIYUN_VIDEO_SIZE || "1280x720"
+    })
+  };
+  const result = await aliyunFetch("/services/aigc/video-generation/video-synthesis", {
+    method: "POST",
+    headers: { "X-DashScope-Async": "enable" },
+    body: JSON.stringify(payload)
+  }, providerConfig);
+  const taskId = extractAliyunTaskId(result);
+  if (!taskId) {
+    throw new Error(payloadMessage(result, "阿里云可灵未返回 task_id"));
+  }
+  return { taskId, requestId: result.request_id || "" };
+}
+
+async function createTencentVideoJob({ prompt, providerConfig }) {
+  const result = await tencentFetch("/submit", {
+    body: JSON.stringify({
+      model: providerConfig.model || process.env.TENCENT_VIDEO_MODEL || "hy-video-1.5",
+      prompt,
+      logo_add: false
+    })
+  }, providerConfig);
+  const taskId = result?.id || result?.task_id || "";
+  if (!taskId) {
+    throw new Error(payloadMessage(result, "腾讯 TokenHub 未返回任务 ID"));
+  }
+  return { taskId, requestId: result.request_id || "" };
+}
+
+async function createBaiduVideoJob({ prompt, seconds, providerConfig }) {
+  const model = providerConfig.model || process.env.BAIDU_VIDEO_MODEL || "qianfan-video-latest";
+  const result = await baiduFetch("/beta/video/generations/qianfan-video", {
+    method: "POST",
+    body: JSON.stringify({
+      type: "text2video",
+      model,
+      model_parameters: {
+        prompt,
+        duration: Math.min(16, Math.max(1, Number.parseInt(seconds, 10) || 5)),
+        seed: 0,
+        aspect_ratio: videoAspectRatio(providerConfig.size || "1280x720"),
+        resolution: videoResolution(providerConfig.size || "1280x720").toLowerCase(),
+        bgm: false,
+        audio: false
+      }
+    })
+  }, providerConfig);
+  const taskId = result?.task_id || result?.data?.task_id || "";
+  if (!taskId) {
+    throw new Error(payloadMessage(result, "百度千帆未返回 task_id"));
+  }
+  return { taskId, model, requestId: result.log_id || result.id || "" };
+}
+
 async function waitForVolcengineVideo(taskId, providerConfig) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < maxWaitMs) {
@@ -328,6 +478,42 @@ async function waitForVolcengineVideo(taskId, providerConfig) {
     await sleep(pollMs);
   }
   throw new Error("火山方舟视频生成等待超时");
+}
+
+async function waitForTencentVideo(taskId, providerConfig) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < maxWaitMs) {
+    const payload = await tencentFetch("/query", {
+      body: JSON.stringify({
+        model: providerConfig.model || process.env.TENCENT_VIDEO_MODEL || "hy-video-1.5",
+        id: taskId
+      })
+    }, providerConfig);
+    const status = String(payload?.status || "").toLowerCase();
+    const videoUrl = extractTencentVideoUrl(payload);
+    if (videoUrl || ["completed", "success", "succeeded"].includes(status)) return payload;
+    if (["failed", "canceled", "cancelled", "error"].includes(status)) {
+      throw new Error(payloadMessage(payload, "腾讯 TokenHub 视频生成失败"));
+    }
+    await sleep(pollMs);
+  }
+  throw new Error("腾讯 TokenHub 视频生成等待超时");
+}
+
+async function waitForBaiduVideo(taskId, model, providerConfig) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < maxWaitMs) {
+    const params = new URLSearchParams({ task_id: taskId, model });
+    const payload = await baiduFetch(`/beta/video/generations/qianfan-video?${params.toString()}`, {}, providerConfig);
+    const status = String(payload?.status || payload?.data?.status || "").toLowerCase();
+    const videoUrl = extractBaiduVideoUrl(payload);
+    if (videoUrl || ["success", "succeeded", "completed"].includes(status)) return payload;
+    if (["failed", "failure", "terminated", "error"].includes(status)) {
+      throw new Error(payloadMessage(payload, "百度千帆视频生成失败"));
+    }
+    await sleep(pollMs);
+  }
+  throw new Error("百度千帆视频生成等待超时");
 }
 
 async function waitForAliyunWanxiangVideo(taskId, providerConfig) {
@@ -421,6 +607,39 @@ async function generateVolcengineShotClip({ shot, prompt, outputPath, clipUrl, p
   };
 }
 
+async function generateAliyunKlingShotClip({ shot, prompt, outputPath, clipUrl, providerConfig }) {
+  const job = await createAliyunKlingVideoJob({ prompt, seconds: shot.duration, providerConfig });
+  const completed = await waitForAliyunWanxiangVideo(job.taskId, providerConfig);
+  const videoUrl = extractAliyunVideoUrl(completed);
+  if (!videoUrl) {
+    throw new Error("阿里云可灵任务成功但未返回 video_url");
+  }
+  await downloadRemoteFile(videoUrl, outputPath);
+  return { shotNo: shot.shotNo, status: "completed", videoId: job.taskId, clipPath: outputPath, clipUrl, prompt };
+}
+
+async function generateTencentShotClip({ shot, prompt, outputPath, clipUrl, providerConfig }) {
+  const job = await createTencentVideoJob({ prompt, providerConfig });
+  const completed = await waitForTencentVideo(job.taskId, providerConfig);
+  const videoUrl = extractTencentVideoUrl(completed);
+  if (!videoUrl) {
+    throw new Error("腾讯 TokenHub 任务成功但未返回 url");
+  }
+  await downloadRemoteFile(videoUrl, outputPath);
+  return { shotNo: shot.shotNo, status: "completed", videoId: job.taskId, clipPath: outputPath, clipUrl, prompt };
+}
+
+async function generateBaiduShotClip({ shot, prompt, outputPath, clipUrl, providerConfig }) {
+  const job = await createBaiduVideoJob({ prompt, seconds: shot.duration, providerConfig });
+  const completed = await waitForBaiduVideo(job.taskId, job.model, providerConfig);
+  const videoUrl = extractBaiduVideoUrl(completed);
+  if (!videoUrl) {
+    throw new Error("百度千帆任务成功但未返回 video_url");
+  }
+  await downloadRemoteFile(videoUrl, outputPath);
+  return { shotNo: shot.shotNo, status: "completed", videoId: job.taskId, clipPath: outputPath, clipUrl, prompt };
+}
+
 export async function generateAiShotClips({ enabled, storyboard, script, topic, outputDir, publicBaseUrl, providerConfig = {} }) {
   if (!enabled) {
     return { requested: false, status: "skipped", message: "未启用 AI 镜头视频生成", clips: [] };
@@ -436,7 +655,7 @@ export async function generateAiShotClips({ enabled, storyboard, script, topic, 
     };
   }
   const provider = providerConfig.provider || "openai";
-  if (!["openai", "aliyun-wanxiang", "volcengine"].includes(provider)) {
+  if (!["openai", "aliyun-wanxiang", "aliyun-kling", "volcengine", "tencent-hunyuan", "baidu-qianfan"].includes(provider)) {
     return unsupportedProviderResult(providerConfig);
   }
 
@@ -445,8 +664,10 @@ export async function generateAiShotClips({ enabled, storyboard, script, topic, 
   for (const shot of storyboard) {
     const outputFileName = `shot-${shot.shotNo}.mp4`;
     const outputPath = join(outputDir, outputFileName);
-    const prompt = provider === "aliyun-wanxiang"
+    const prompt = provider === "aliyun-wanxiang" || provider === "aliyun-kling"
       ? aliyunShotPrompt({ topic, script, shot })
+      : provider === "baidu-qianfan"
+        ? baiduShotPrompt({ topic, script, shot })
       : provider === "volcengine"
         ? volcengineShotPrompt({ topic, script, shot })
         : shotPrompt({ topic, script, shot });
@@ -454,8 +675,14 @@ export async function generateAiShotClips({ enabled, storyboard, script, topic, 
       const clipArgs = { shot, prompt, outputPath, clipUrl: `${publicBaseUrl}/${outputFileName}`, providerConfig };
       clips.push(provider === "aliyun-wanxiang"
         ? await generateAliyunWanxiangShotClip(clipArgs)
+        : provider === "aliyun-kling"
+          ? await generateAliyunKlingShotClip(clipArgs)
         : provider === "volcengine"
           ? await generateVolcengineShotClip(clipArgs)
+          : provider === "tencent-hunyuan"
+            ? await generateTencentShotClip(clipArgs)
+            : provider === "baidu-qianfan"
+              ? await generateBaiduShotClip(clipArgs)
           : await generateOpenaiShotClip(clipArgs));
     } catch (error) {
       clips.push({

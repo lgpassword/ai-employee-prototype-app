@@ -21,5 +21,6 @@
 - 当前执行 bead：`codex-0d20`。
 - 已接通 `火山方舟 / 即梦 Seedance` 视频任务式接口。
 - 已将火山视频配置从 AK/SK 改为 API Key 模式。
-- 当前真实视频适配器：OpenAI、阿里云百炼/通义万相、火山方舟/Seedance。
-- 仍未接通的页面配置项：阿里云百炼/可灵 Kling、腾讯云 TokenHub、百度千帆。
+- 当前真实视频适配器：OpenAI、阿里云百炼/通义万相、阿里云百炼/可灵 Kling、火山方舟/Seedance、腾讯云 TokenHub、百度千帆。
+- 已新增异步视频渲染任务接口：`POST /api/videos/render-jobs`、`GET /api/videos/render-jobs`、`GET /api/videos/render-jobs/:id`。
+- 仍需真实 API Key 联调；任务中心 UI、失败重试和成本统计已拆到 bead：`codex-exv6`。

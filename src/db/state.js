@@ -99,6 +99,7 @@ export const store = {
     { id: "vid_5", platform: "xiaohongshu", title: "防护手套真实使用笔记", author: "小红书账号", views: 76000, likes: 16800, duration: "01:36", tags: ["手套", "种草"], status: "ready", copy: "防护手套真实使用笔记：做家务、骑车、搬运都能用，重点看防滑和贴合度。" }
   ],
   generatedVideos: [],
+  videoRenderJobs: [],
   conversations: [
     {
       id: "conv_1",

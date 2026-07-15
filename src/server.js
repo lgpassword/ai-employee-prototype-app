@@ -6,7 +6,7 @@ import { listAccounts, connectAccount, toggleAccount } from "./modules/accounts.
 import { getDashboard } from "./modules/dashboard.js";
 import { importContent, listContents, searchLatestContents } from "./modules/content.js";
 import { adoptSuggestion, buildAutoReplySuggestion, findConversation, getPlatformMessagingStatus, listConversations, receivePlatformMessage, sendPlatformReply, sendReply, updateCustomerProfile } from "./modules/messages.js";
-import { createVideoDraft, listGeneratedVideos, renderVideoWithVoice } from "./modules/video.js";
+import { createVideoDraft, createVideoRenderJob, findVideoRenderJob, listGeneratedVideos, listVideoRenderJobs, renderVideoWithVoice } from "./modules/video.js";
 import { getPersistenceStatus, loadPersistentStore, savePersistentStore } from "./db/json-store.js";
 import { getLiveDashboard } from "./modules/live.js";
 import { getSalesDashboard } from "./modules/sales.js";
@@ -204,9 +204,23 @@ const server = createServer(async (req, res) => {
       sendJson(res, 200, { items: listGeneratedVideos() });
       return;
     }
+    if (req.method === "GET" && url.pathname === "/api/videos/render-jobs") {
+      sendJson(res, 200, { items: listVideoRenderJobs() });
+      return;
+    }
+    if (req.method === "GET" && url.pathname.match(/^\/api\/videos\/render-jobs\/[^/]+$/)) {
+      const item = findVideoRenderJob(url.pathname.split("/").pop());
+      sendJson(res, item ? 200 : 404, item ? { item } : { error: "not_found" });
+      return;
+    }
     if (req.method === "POST" && url.pathname === "/api/videos") {
       consumeQuota("videoDrafts");
       sendJson(res, 201, { item: await createVideoDraft(await readJson(req)) });
+      return;
+    }
+    if (req.method === "POST" && url.pathname === "/api/videos/render-jobs") {
+      consumeQuota("videoRenders");
+      sendJson(res, 202, { item: createVideoRenderJob(await readJson(req)) });
       return;
     }
     if (req.method === "POST" && url.pathname === "/api/videos/render") {

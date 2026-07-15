@@ -5,6 +5,7 @@ import { generateSpeechFile } from "../services/tts-service.js";
 import { extractAudioFromVideoFile, probeMediaDurationSeconds, renderVideoFile } from "../services/video-renderer.js";
 import { generateAiShotClips } from "../services/ai-video-service.js";
 import { generateVideoPlanWithTextModel } from "../services/text-generation-service.js";
+import { savePersistentStore } from "../db/json-store.js";
 import { getTextProviderConfig, getVideoProviderConfig, getVoiceProviderConfig } from "./settings.js";
 
 const generatedDir = fileURLToPath(new URL("../../public/generated", import.meta.url));
@@ -12,6 +13,14 @@ const generatedDir = fileURLToPath(new URL("../../public/generated", import.meta
 // AI 视频模块：对应原型的 AI 视频生成页，生成的是可编辑任务草稿。
 export function listGeneratedVideos() {
   return db.generatedVideos;
+}
+
+export function listVideoRenderJobs() {
+  return db.videoRenderJobs || [];
+}
+
+export function findVideoRenderJob(id) {
+  return listVideoRenderJobs().find((item) => item.id === id) || null;
 }
 
 function parseDurationSeconds(value) {
@@ -319,5 +328,73 @@ export async function renderVideoWithVoice(payload) {
   draft.renderTask = task;
   draft.status = "rendered";
   return draft;
+}
+
+function publicRenderPayload(payload = {}) {
+  return {
+    id: String(payload.id || "").trim(),
+    script: payload.script,
+    storyboard: payload.storyboard,
+    voiceName: payload.voiceName,
+    useAiVideoClips: Boolean(payload.useAiVideoClips)
+  };
+}
+
+async function runVideoRenderJob(job) {
+  job.status = "running";
+  job.startedAt = new Date().toISOString();
+  job.steps.push({ name: "异步任务开始", status: "completed", at: job.startedAt });
+  try {
+    const draft = await renderVideoWithVoice(job.payload);
+    job.status = "completed";
+    job.finishedAt = new Date().toISOString();
+    job.result = draft.renderTask;
+    job.steps.push({ name: "视频生成完成", status: "completed", at: job.finishedAt });
+  } catch (error) {
+    job.status = "failed";
+    job.finishedAt = new Date().toISOString();
+    job.error = error instanceof Error ? error.message : "异步视频生成失败";
+    job.steps.push({ name: "视频生成失败", status: "failed", message: job.error, at: job.finishedAt });
+    const draft = db.generatedVideos.find((item) => item.id === job.payload.id);
+    if (draft) {
+      draft.status = "draft";
+    }
+  } finally {
+    try {
+      savePersistentStore();
+    } catch {
+      // 后台任务不能因为快照保存失败而中断进程。
+    }
+  }
+}
+
+export function createVideoRenderJob(payload) {
+  const normalized = publicRenderPayload(payload);
+  if (!normalized.id) {
+    throw new Error("视频草稿 ID 不能为空");
+  }
+  const draft = db.generatedVideos.find((item) => item.id === normalized.id);
+  if (!draft) {
+    throw new Error("视频草稿不存在");
+  }
+  db.videoRenderJobs ||= [];
+  const job = {
+    id: nextId("video_job", db.videoRenderJobs),
+    draftId: normalized.id,
+    status: "queued",
+    payload: normalized,
+    result: null,
+    error: "",
+    steps: [{ name: "任务进入队列", status: "completed", at: new Date().toISOString() }],
+    createdAt: new Date().toISOString(),
+    startedAt: "",
+    finishedAt: ""
+  };
+  db.videoRenderJobs.unshift(job);
+  draft.status = "queued_render";
+  setTimeout(() => {
+    runVideoRenderJob(job);
+  }, 0);
+  return job;
 }
 
