@@ -1,3 +1,14 @@
+/**
+ * Frontend application controller.
+ *
+ * 前端单页应用控制器：
+ * - 维护页面状态变量
+ * - 封装后端 API 调用
+ * - 渲染业务页面与弹窗
+ * - 绑定客户消息、AI 视频、系统配置等交互链路
+ */
+
+/** Page title map used by sidebar navigation. / 左侧导航对应的页面标题。 */
 const pageTitles = {
   dashboard: "数据仪表板",
   content: "内容搜索",
@@ -16,6 +27,7 @@ const pageTitles = {
   settings: "账号设置"
 };
 
+/** Platform icon and color map. / 平台图标和颜色映射。 */
 const platformIcons = {
   douyin: ["📱", "#000"],
   kuaishou: ["⚡", "#ff4500"],
@@ -23,17 +35,29 @@ const platformIcons = {
   xiaohongshu: ["📕", "#ff2442"]
 };
 
+/** Active chart instances, destroyed when switching pages. / 当前页面图表实例，切换页面时销毁。 */
 let currentCharts = [];
+/** Current selected conversation id in customer management. / 客户管理当前选中的会话 ID。 */
 let activeConversationId = null;
+/** Current login session returned by backend. / 后端返回的当前登录会话。 */
 let session = { userType: null };
+/** Current generated video draft shown in AI video workspace. / AI 视频生成工作台当前草稿。 */
 let currentVideoDraft = null;
+/** Active AI video tab key. / AI 视频工作台当前标签页。 */
 let activeVideoTab = "script";
+/** Scenario analysis result for video copy. / 文案使用场景分析结果。 */
 let scenarioAnalysis = null;
+/** Selected usage scenarios used by script generation. / 用户选择并用于脚本生成的使用场景。 */
 let selectedUsageScenarios = [];
+/** Cached video provider options from settings API. / 从配置接口缓存的视频供应商模型选项。 */
 let videoProviderOptionsCache = [];
+/** Latest searched content items for modal detail lookup. / 最近一次内容搜索结果，用于详情弹窗查询。 */
 let latestContentItems = [];
+/** Cached settings/account data for settings modal. / 系统配置弹窗缓存数据。 */
 let activeSettingsData = null;
+/** Special option value for manually entered video model id. / 自定义视频模型的特殊选项值。 */
 const customVideoModelValue = "__custom_video_model__";
+/** Human-readable labels for editable script fields. / 可编辑脚本字段中文标签。 */
 const scriptFieldLabels = {
   hook: "开场钩子",
   sellingPoint: "核心卖点",
@@ -41,14 +65,21 @@ const scriptFieldLabels = {
   callToAction: "行动引导"
 };
 
+/** Query one DOM element. / 查询单个 DOM 元素。 */
 function $(selector) {
   return document.querySelector(selector);
 }
 
+/** Update header status text. / 更新顶部状态文字。 */
 function setStatus(message) {
   $("#status").textContent = message;
 }
 
+/**
+ * Call backend JSON API and normalize error handling.
+ *
+ * 调用后端 JSON API，并统一处理错误返回。
+ */
 async function api(path, options = {}) {
   const response = await fetch(path, {
     ...options,

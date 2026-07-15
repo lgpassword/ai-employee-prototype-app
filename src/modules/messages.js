@@ -1,6 +1,12 @@
 import { platformName, store } from "../store.js";
 
 // 客户消息模块：对应客户消息页，闭环包含平台消息接收、发送回复、AI 建议和本地适配器同步状态。
+
+/**
+ * Return all conversations with platform display metadata.
+ *
+ * 返回客户会话列表，并补齐平台名称、回复目标和平台跳转地址。
+ */
 export function listConversations() {
   return store.conversations.map((item) => ({
     ...item,
@@ -10,14 +16,25 @@ export function listConversations() {
   }));
 }
 
+/**
+ * Find one conversation by id.
+ *
+ * 根据会话 ID 查找会话。
+ */
 export function findConversation(id) {
   return store.conversations.find((item) => item.id === id) || null;
 }
 
+/** Build localized timestamp text. / 生成本地化时间文本。 */
 function nowText() {
   return new Date().toLocaleString("zh-CN", { hour12: false });
 }
 
+/**
+ * Build external platform entry URL.
+ *
+ * 生成对应平台的跳转入口地址。
+ */
 function platformEntryUrl(conversation) {
   const keyword = encodeURIComponent(conversation?.customerName || conversation?.lastMessage || "");
   return {
@@ -28,6 +45,11 @@ function platformEntryUrl(conversation) {
   }[conversation?.platform] || `https://www.baidu.com/s?wd=${keyword}`;
 }
 
+/**
+ * Resolve current platform connection state.
+ *
+ * 解析平台连接状态。未授权不阻断业务链路，只影响是否能切换官方适配器。
+ */
 function platformConnection(platform) {
   const account = store.accounts.find((item) => item.platform === platform);
   const douyinAuthorized = platform === "douyin" && Boolean(store.douyinOAuth?.accessToken);
@@ -42,6 +64,11 @@ function platformConnection(platform) {
   };
 }
 
+/**
+ * Normalize attachment metadata from frontend or webhook payload.
+ *
+ * 标准化前端或平台 webhook 传入的附件元数据。
+ */
 function normalizeAttachments(value) {
   if (!Array.isArray(value)) return [];
   return value.map((item, index) => ({
@@ -52,10 +79,16 @@ function normalizeAttachments(value) {
   }));
 }
 
+/** Build next local conversation id. / 生成本地会话 ID。 */
 function nextConversationId() {
   return `conv_${store.conversations.length + 1}_${Date.now()}`;
 }
 
+/**
+ * Find an existing inbound conversation or create one.
+ *
+ * 接收平台入站消息时，优先复用会话；不存在则创建新会话。
+ */
 function findOrCreateInboundConversation(payload) {
   const conversationId = String(payload.conversationId || "").trim();
   if (conversationId) {
@@ -87,6 +120,11 @@ function findOrCreateInboundConversation(payload) {
   return conversation;
 }
 
+/**
+ * Return platform messaging gateway status.
+ *
+ * 返回平台消息网关状态，用于前端判断当前是本地队列还是官方适配器。
+ */
 export function getPlatformMessagingStatus() {
   return {
     providerMode: "local_gateway",
@@ -95,6 +133,11 @@ export function getPlatformMessagingStatus() {
   };
 }
 
+/**
+ * Save a local reply without platform gateway metadata.
+ *
+ * 保存本地回复。保留该方法用于兼容旧接口。
+ */
 export function sendReply(id, text) {
   const conversation = findConversation(id);
   if (!conversation) {
@@ -121,6 +164,11 @@ export function sendReply(id, text) {
   return conversation;
 }
 
+/**
+ * Send a reply through the platform messaging gateway.
+ *
+ * 通过平台消息网关发送回复。未授权时进入本地平台队列，不阻断业务链路。
+ */
 export function sendPlatformReply(id, payload = {}) {
   const conversation = findConversation(id);
   if (!conversation) {
@@ -176,6 +224,11 @@ export function sendPlatformReply(id, payload = {}) {
   };
 }
 
+/**
+ * Send current AI suggestion through the platform gateway.
+ *
+ * 采纳当前 AI 建议，并通过平台消息网关发送。
+ */
 export function adoptSuggestion(id) {
   const conversation = findConversation(id);
   if (!conversation) {
@@ -184,6 +237,11 @@ export function adoptSuggestion(id) {
   return sendPlatformReply(id, { text: conversation.aiSuggestion }).conversation;
 }
 
+/**
+ * Receive an inbound platform message.
+ *
+ * 接收平台入站消息，写入或创建对应客户会话。
+ */
 export function receivePlatformMessage(payload = {}) {
   const conversation = findOrCreateInboundConversation(payload);
   const text = String(payload.text || payload.content || "").trim();
@@ -217,6 +275,11 @@ export function receivePlatformMessage(payload = {}) {
   };
 }
 
+/**
+ * Build an AI reply suggestion using customer AI configuration and knowledge base.
+ *
+ * 根据客户 AI 配置和企业知识库生成回复建议。
+ */
 export function buildAutoReplySuggestion(id) {
   const conversation = findConversation(id);
   if (!conversation) {
@@ -229,6 +292,11 @@ export function buildAutoReplySuggestion(id) {
   return conversation;
 }
 
+/**
+ * Update customer profile fields.
+ *
+ * 更新客户分组、标签、生命周期和自动回复状态。
+ */
 export function updateCustomerProfile(id, payload) {
   const conversation = findConversation(id);
   if (!conversation) {

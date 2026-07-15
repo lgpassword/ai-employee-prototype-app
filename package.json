@@ -1,7 +1,9 @@
 {
   "name": "ai-employee-prototype-app",
   "version": "0.1.0",
-  "private": true,
+  "description": "AI employee prototype for multi-platform content operations, AI video generation, customer messaging, merchant onboarding, and business analytics.",
+  "private": false,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "start": "node src/server.js",

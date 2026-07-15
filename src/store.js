@@ -1,4 +1,8 @@
 // 内存数据仓储：当前程序先保证原型链路闭环，不引入数据库依赖。
+// Open-source note: this file contains demo accounts and mock business data only.
+// 开源说明：该文件只包含演示账号和模拟业务数据，不包含真实平台密钥。
+
+/** Global in-memory store used by all backend modules. / 后端所有模块共享的内存数据源。 */
 export const store = {
   session: {
     userId: null,
@@ -311,6 +315,7 @@ export const store = {
   }
 };
 
+/** Convert platform code to display name. / 将平台编码转换为展示名称。 */
 export function platformName(code) {
   return {
     douyin: "抖音",
@@ -320,6 +325,7 @@ export function platformName(code) {
   }[code] || code;
 }
 
+/** Generate a simple local id for in-memory collections. / 为内存集合生成本地 ID。 */
 export function nextId(prefix, collection) {
   return `${prefix}_${collection.length + 1}_${Date.now()}`;
 }

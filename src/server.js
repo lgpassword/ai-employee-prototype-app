@@ -43,10 +43,18 @@ import {
   updateUserAccess
 } from "./modules/onboarding.js";
 
+/** HTTP server port. / HTTP 服务端口。 */
 const port = Number(process.env.PORT || 3201);
+/** Project root directory used to load `.env`. / 项目根目录，用于读取 `.env`。 */
 const projectDir = fileURLToPath(new URL("..", import.meta.url));
+/** Static frontend directory. / 前端静态资源目录。 */
 const publicDir = fileURLToPath(new URL("../public", import.meta.url));
 
+/**
+ * Load local environment variables from `.env`.
+ *
+ * 从 `.env` 加载本地环境变量。已有系统环境变量不会被覆盖。
+ */
 function loadLocalEnv() {
   const envPath = join(projectDir, ".env");
   if (!existsSync(envPath)) return;
@@ -66,16 +74,19 @@ function loadLocalEnv() {
 
 loadLocalEnv();
 
+/** Send a JSON response. / 返回 JSON 响应。 */
 function sendJson(res, status, payload) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(payload));
 }
 
+/** Send an HTML response. / 返回 HTML 响应。 */
 function sendHtml(res, status, html) {
   res.writeHead(status, { "content-type": "text/html; charset=utf-8" });
   res.end(html);
 }
 
+/** Read raw request body. / 读取请求原始 body。 */
 function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -85,11 +96,13 @@ function readBody(req) {
   });
 }
 
+/** Parse request body as JSON. / 将请求 body 解析为 JSON。 */
 async function readJson(req) {
   const body = await readBody(req);
   return body.trim() ? JSON.parse(body) : {};
 }
 
+/** Serve frontend static files from `public/`. / 从 `public/` 返回前端静态文件。 */
 function serveStatic(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname === "/" ? "/index.html" : url.pathname;
@@ -110,6 +123,11 @@ function serveStatic(req, res) {
   stream.on("error", () => sendJson(res, 404, { error: "not_found" }));
 }
 
+/**
+ * Main HTTP route dispatcher.
+ *
+ * 主 HTTP 路由分发器：统一处理鉴权、业务 API 和静态资源。
+ */
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);

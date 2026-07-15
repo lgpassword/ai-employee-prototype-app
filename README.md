@@ -1,100 +1,236 @@
-# AI Employee Prototype App
+# AI Employee Prototype App / AI 员工系统原型
 
-AI 员工系统原型，用于多平台内容搜索、AI 视频生成、发布计划、商品选品、达人合作、客户管理、商户入驻、团队权限和平台消息通信链路验证。
+AI Employee Prototype App is a local prototype for multi-platform content operations, AI video generation, customer messaging, merchant onboarding, product selection, publishing plans, creator cooperation, team permissions, and business analytics.
 
-## 技术栈
+AI 员工系统原型是一个本地运行的多平台经营工作台，覆盖内容搜索、AI 视频生成、客户管理、商户入驻、商品选品、发布计划、达人合作、团队权限和经营分析。
 
-- Node.js 原生 HTTP 服务
-- 原生 HTML / CSS / JavaScript 前端
-- 内存数据仓储
-- FFmpeg 本地视频/音频合成依赖
+## Features / 功能
 
-## 目录结构
+- Multi-platform content search / 多平台内容搜索
+- AI script and storyboard generation / AI 脚本与分镜生成
+- Local voice and video rendering / 本地语音与视频生成
+- AI video provider configuration / AI 视频供应商配置
+- Customer messaging and local platform message gateway / 客户聊天与本地平台消息网关
+- Customer AI reply configuration and knowledge base / 客户 AI 回复配置与企业知识库
+- Publishing plans and platform queue status / 发布计划与平台队列状态
+- Product selection with multi-platform links / 商品选品与多平台链接
+- Creator cooperation process / 达人合作流程
+- Merchant onboarding and simulated review code / 商户入驻与审核 Code 模拟
+- Team members, roles, audit chart, and audit detail / 团队成员、角色、操作日志图表与详情
+- Douyin OAuth configuration foundation / 抖音 OAuth 配置底座
 
-```text
-.
-├── package.json
-├── package-lock.json
-├── public/
-│   ├── index.html
-│   ├── app.js
-│   └── styles.css
-└── src/
-    ├── server.js
-    ├── store.js
-    ├── modules/
-    │   ├── accounts.js
-    │   ├── analytics.js
-    │   ├── content.js
-    │   ├── creators.js
-    │   ├── dashboard.js
-    │   ├── douyin.js
-    │   ├── finance.js
-    │   ├── live.js
-    │   ├── messages.js
-    │   ├── onboarding.js
-    │   ├── orders.js
-    │   ├── products.js
-    │   ├── publishing.js
-    │   ├── sales.js
-    │   ├── settings.js
-    │   ├── team.js
-    │   └── video.js
-    └── services/
-        ├── ai-video-service.js
-        ├── scenario-research.js
-        ├── text-generation-service.js
-        ├── tts-service.js
-        └── video-renderer.js
-```
+## Requirements / 环境要求
 
-## 不上传到 GitHub 的内容
+Install these before running the project:
 
-以下内容由 `.gitignore` 排除：
+运行前需要安装：
 
-- `node_modules/`：依赖目录，使用 `npm install` 重新安装。
-- `.local/`：本地日志、授权缓存和运行数据。
-- `.env` / `.env.*`：本地密钥配置。
-- `public/generated/`：AI 视频、音频和分镜生成结果。
+- Node.js 18 or later / Node.js 18 或更高版本
+- npm
+- Windows PowerShell is recommended for local voice rendering / 本地语音生成建议使用 Windows PowerShell
 
-## 安装
+The project uses `@ffmpeg-installer/ffmpeg`, so FFmpeg will be installed by npm.
+
+项目使用 `@ffmpeg-installer/ffmpeg`，执行 `npm install` 后会自动安装 FFmpeg 依赖。
+
+## Install / 安装
 
 ```powershell
+git clone https://github.com/lgpassword/ai-employee-prototype-app.git
+cd ai-employee-prototype-app
 npm install
 ```
 
-## 启动
+If you are running from an existing local directory:
+
+如果你已经在本地目录中：
+
+```powershell
+cd D:\github\ai-employee-prototype-app
+npm install
+```
+
+## Start / 启动
 
 ```powershell
 npm start
 ```
 
-默认地址：
+Default local URL:
+
+默认访问地址：
 
 ```text
 http://127.0.0.1:3201
 ```
 
-## 检查
+## Validate / 检查
 
 ```powershell
 npm run check
 ```
 
-## 演示账号
+This command checks the syntax of backend modules, services, and frontend JavaScript.
+
+该命令会检查后端模块、服务层和前端 JavaScript 语法。
+
+## Demo Accounts / 演示账号
 
 ```text
-管理员: admin / admin123
-个人用户: user / user123
-商户用户: merchant / merchant123
+Admin / 管理员: admin / admin123
+Personal / 个人用户: user / user123
+Merchant / 商户用户: merchant / merchant123
 ```
 
-## 平台消息链路
+## Project Structure / 项目结构
 
-客户管理页已经接入本地平台消息网关：
+```text
+.
+├── .github/
+│   ├── CODEOWNERS
+│   └── pull_request_template.md
+├── docs/
+│   ├── API_REFERENCE.md
+│   ├── CODE_MAP.md
+│   └── GITHUB_RELEASE.md
+├── public/
+│   ├── index.html
+│   ├── app.js
+│   └── styles.css
+├── src/
+│   ├── server.js
+│   ├── store.js
+│   ├── modules/
+│   └── services/
+├── .gitignore
+├── LICENSE
+├── package.json
+├── package-lock.json
+└── README.md
+```
 
-- `GET /api/platform-messaging/status`
-- `POST /api/platform-messaging/inbound`
-- `POST /api/conversations/:id/platform-reply`
+See:
 
-未授权平台不会阻断业务链路，消息会进入本地平台队列；完成真实平台授权和消息接口权限后，可以在同一适配层替换为官方接口下发。
+- `docs/CODE_MAP.md` for file-by-file responsibilities and flow descriptions.
+- `docs/API_REFERENCE.md` for API and backend method mapping.
+- `docs/GITHUB_RELEASE.md` for GitHub publishing and branch protection.
+
+文档说明：
+
+- `docs/CODE_MAP.md`：每个文件的作用和业务链路。
+- `docs/API_REFERENCE.md`：接口与后端方法映射。
+- `docs/GITHUB_RELEASE.md`：GitHub 上传和主分支保护。
+
+## Runtime Data / 运行数据
+
+These directories are intentionally ignored by Git:
+
+以下目录不会上传到 Git：
+
+```text
+node_modules/
+.local/
+public/generated/
+.env
+.env.*
+```
+
+Why:
+
+原因：
+
+- `node_modules/`: installed dependencies; restore with `npm install`.
+- `.local/`: local logs, OAuth cache, runtime data, possible secrets.
+- `public/generated/`: generated videos, audio, clips, storyboard artifacts.
+- `.env`: local API keys and secrets.
+
+## AI Provider Configuration / AI 供应商配置
+
+You can configure providers inside the app:
+
+可以在系统界面中配置：
+
+- Script/storyboard model / 脚本与分镜模型
+- Voice model / 配音模型
+- Video generation provider / 视频生成供应商
+- Customer AI reply model / 客户 AI 回复模型
+- Enterprise knowledge base / 企业知识库
+
+Secrets are kept locally and should not be committed to GitHub.
+
+密钥只应保存在本地，不要提交到 GitHub。
+
+## Platform Messaging Gateway / 平台消息网关
+
+The app includes a local platform messaging gateway:
+
+系统包含本地平台消息网关：
+
+```text
+GET  /api/platform-messaging/status
+POST /api/platform-messaging/inbound
+POST /api/conversations/:id/platform-reply
+```
+
+Authorization does not block the business flow. If a platform is not authorized, messages enter the local platform queue. After official authorization and message API permissions are available, the same adapter layer can send to the real platform.
+
+授权不会阻断业务链路。未授权时消息会进入本地平台队列；完成真实平台授权和消息接口权限后，同一适配层可以切换为官方接口下发。
+
+## GitHub Publishing / 上传 GitHub
+
+```powershell
+cd D:\github\ai-employee-prototype-app
+git remote add origin https://github.com/lgpassword/ai-employee-prototype-app.git
+git branch -M main
+git push -u origin main
+```
+
+See `docs/GITHUB_RELEASE.md` for branch protection and release notes.
+
+主分支保护和开源发布说明见 `docs/GITHUB_RELEASE.md`。
+
+## Branch Protection / 主分支保护
+
+The repository includes:
+
+项目已包含：
+
+```text
+.github/CODEOWNERS
+.github/pull_request_template.md
+```
+
+To make sure only the owner can upload code to `main`, enable branch protection in GitHub repository settings and restrict push access to `lgpassword`.
+
+要确保只有所有者可以向 `main` 上传代码，需要在 GitHub 仓库设置中启用分支保护，并将 push 权限限制为 `lgpassword`。
+
+## License / 开源协议
+
+MIT License. See `LICENSE`.
+
+MIT 开源协议，详见 `LICENSE`。
+
+## Common Issues / 常见问题
+
+### Can another computer run this project directly? / 其他电脑能直接运行吗？
+
+Yes, after installing Node.js and dependencies:
+
+可以，但需要先安装 Node.js 和依赖：
+
+```powershell
+npm install
+npm start
+```
+
+### Are generated videos uploaded to GitHub? / 生成的视频会上传吗？
+
+No. `public/generated/` is ignored.
+
+不会。`public/generated/` 已被忽略。
+
+### Are API keys uploaded? / API Key 会上传吗？
+
+No. `.env` and `.local/` are ignored.
+
+不会。`.env` 和 `.local/` 已被忽略。
