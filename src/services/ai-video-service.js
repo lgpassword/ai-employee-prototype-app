@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 const defaultOpenaiBaseUrl = "https://api.openai.com/v1";
 const defaultAliyunBaseUrl = "https://dashscope.aliyuncs.com/api/v1";
+const defaultVolcengineBaseUrl = "https://ark.cn-beijing.volces.com/api/v3";
 const pollMs = Number(process.env.AI_VIDEO_POLL_MS || process.env.OPENAI_VIDEO_POLL_MS || process.env.ALIYUN_VIDEO_POLL_MS || 5000);
 const maxWaitMs = Number(process.env.AI_VIDEO_MAX_WAIT_MS || process.env.OPENAI_VIDEO_MAX_WAIT_MS || process.env.ALIYUN_VIDEO_MAX_WAIT_MS || 600000);
 
@@ -22,12 +23,23 @@ function aliyunApiKey(providerConfig = {}) {
   return providerConfig.apiKey || process.env.ALIYUN_API_KEY || process.env.DASHSCOPE_API_KEY || "";
 }
 
+function volcengineApiKey(providerConfig = {}) {
+  return providerConfig.apiKey || process.env.VOLCENGINE_API_KEY || process.env.ARK_API_KEY || process.env.DOUBAO_API_KEY || "";
+}
+
 function aliyunBaseUrl(providerConfig = {}) {
   const configuredEndpoint = providerConfig.endpoint || process.env.ALIYUN_VIDEO_ENDPOINT || process.env.DASHSCOPE_BASE_URL || defaultAliyunBaseUrl;
   let baseUrl = String(configuredEndpoint).trim().replace(/\/$/, "");
   baseUrl = baseUrl.replace(/\/services\/aigc\/video-generation\/video-synthesis$/i, "");
   baseUrl = baseUrl.replace(/\/tasks$/i, "");
   return /\/api\/v1$/i.test(baseUrl) ? baseUrl : `${baseUrl}/api/v1`;
+}
+
+function volcengineBaseUrl(providerConfig = {}) {
+  const configuredEndpoint = providerConfig.endpoint || process.env.VOLCENGINE_VIDEO_ENDPOINT || process.env.ARK_BASE_URL || defaultVolcengineBaseUrl;
+  let baseUrl = String(configuredEndpoint).trim().replace(/\/$/, "");
+  baseUrl = baseUrl.replace(/\/contents\/generations\/tasks\/?$/i, "");
+  return /\/api\/v3$/i.test(baseUrl) ? baseUrl : `${baseUrl}/api/v3`;
 }
 
 function sleep(ms) {
@@ -62,6 +74,19 @@ function aliyunShotPrompt({ topic, script, shot }) {
     `旁白含义：${shot.subtitle}`,
     `整体风格：${script.style || "专业商业短视频"}`,
     "画面需要真实、清晰、商业广告质感，使用自然运镜和干净光线。"
+  ].filter(Boolean).join("\n");
+}
+
+function volcengineShotPrompt({ topic, script, shot }) {
+  return [
+    "请生成一个真实质感的商品动画短视频镜头，不要添加字幕、文字贴片、Logo 或水印。",
+    `商品或活动主题：${topic}`,
+    `镜头场景：${shot.scene}`,
+    `画面动作：${shot.visual}`,
+    `旁白含义：${shot.subtitle}`,
+    `整体风格：${script.style || "电商商品广告短视频"}`,
+    `镜头时长约 ${allowedSeconds(shot.duration)} 秒。`,
+    "画面需要突出商品外观、使用场景、材质细节和购买欲，适合抖音/快手/小红书商品种草。"
   ].filter(Boolean).join("\n");
 }
 
@@ -108,6 +133,21 @@ async function aliyunFetch(path, options = {}, providerConfig = {}) {
   const payload = parseJsonText(text);
   if (response.ok) return payload;
   throw new Error(payloadMessage(payload, `通义万相接口请求失败: ${response.status}`));
+}
+
+async function volcengineFetch(path, options = {}, providerConfig = {}) {
+  const response = await fetch(`${volcengineBaseUrl(providerConfig)}${path}`, {
+    ...options,
+    headers: {
+      authorization: `Bearer ${volcengineApiKey(providerConfig)}`,
+      ...(options.body ? { "content-type": "application/json" } : {}),
+      ...(options.headers || {})
+    }
+  });
+  const text = await response.text().catch(() => "");
+  const payload = parseJsonText(text);
+  if (response.ok) return payload;
+  throw new Error(payloadMessage(payload, `火山方舟视频接口请求失败: ${response.status}`));
 }
 
 async function createVideoJob({ prompt, seconds, providerConfig }) {
@@ -157,6 +197,35 @@ function extractAliyunVideoUrl(payload) {
     || payload?.output?.video?.url
     || payload?.output?.results?.[0]?.video_url
     || payload?.output?.results?.[0]?.url
+    || "";
+}
+
+function extractVolcengineTaskId(payload) {
+  return payload?.id
+    || payload?.task_id
+    || payload?.data?.id
+    || payload?.data?.task_id
+    || payload?.output?.task_id
+    || "";
+}
+
+function extractVolcengineStatus(payload) {
+  return String(payload?.status || payload?.data?.status || payload?.task_status || payload?.output?.task_status || "").toLowerCase();
+}
+
+function extractVolcengineVideoUrl(payload) {
+  const content = payload?.content || payload?.data?.content || payload?.result?.content || payload?.output?.content;
+  if (Array.isArray(content)) {
+    const videoItem = content.find((item) => item?.video_url || item?.url);
+    if (videoItem) return videoItem.video_url || videoItem.url || "";
+  }
+  return content?.video_url
+    || content?.url
+    || payload?.video_url
+    || payload?.data?.video_url
+    || payload?.result?.video_url
+    || payload?.output?.video_url
+    || payload?.output?.results?.[0]?.video_url
     || "";
 }
 
@@ -223,6 +292,42 @@ async function createAliyunWanxiangVideoJob({ prompt, seconds, providerConfig })
     throw new Error(payloadMessage(result, "通义万相未返回 task_id"));
   }
   return { taskId, requestId: result.request_id || "" };
+}
+
+async function createVolcengineVideoJob({ prompt, providerConfig }) {
+  const payload = {
+    model: providerConfig.model || process.env.VOLCENGINE_VIDEO_MODEL || "doubao-seedance-1-0-pro-250528",
+    content: [
+      {
+        type: "text",
+        text: prompt
+      }
+    ]
+  };
+  const result = await volcengineFetch("/contents/generations/tasks", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  }, providerConfig);
+  const taskId = extractVolcengineTaskId(result);
+  if (!taskId) {
+    throw new Error(payloadMessage(result, "火山方舟视频生成未返回任务 ID"));
+  }
+  return { taskId, requestId: result.request_id || result?.data?.request_id || "" };
+}
+
+async function waitForVolcengineVideo(taskId, providerConfig) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < maxWaitMs) {
+    const payload = await volcengineFetch(`/contents/generations/tasks/${encodeURIComponent(taskId)}`, {}, providerConfig);
+    const status = extractVolcengineStatus(payload);
+    const videoUrl = extractVolcengineVideoUrl(payload);
+    if (videoUrl || ["succeeded", "success", "completed"].includes(status)) return payload;
+    if (["failed", "canceled", "cancelled", "error"].includes(status)) {
+      throw new Error(payloadMessage(payload, "火山方舟视频生成失败"));
+    }
+    await sleep(pollMs);
+  }
+  throw new Error("火山方舟视频生成等待超时");
 }
 
 async function waitForAliyunWanxiangVideo(taskId, providerConfig) {
@@ -298,6 +403,24 @@ async function generateAliyunWanxiangShotClip({ shot, prompt, outputPath, clipUr
   };
 }
 
+async function generateVolcengineShotClip({ shot, prompt, outputPath, clipUrl, providerConfig }) {
+  const job = await createVolcengineVideoJob({ prompt, seconds: shot.duration, providerConfig });
+  const completed = await waitForVolcengineVideo(job.taskId, providerConfig);
+  const videoUrl = extractVolcengineVideoUrl(completed);
+  if (!videoUrl) {
+    throw new Error("火山方舟任务成功但未返回 video_url");
+  }
+  await downloadRemoteFile(videoUrl, outputPath);
+  return {
+    shotNo: shot.shotNo,
+    status: "completed",
+    videoId: job.taskId,
+    clipPath: outputPath,
+    clipUrl,
+    prompt
+  };
+}
+
 export async function generateAiShotClips({ enabled, storyboard, script, topic, outputDir, publicBaseUrl, providerConfig = {} }) {
   if (!enabled) {
     return { requested: false, status: "skipped", message: "未启用 AI 镜头视频生成", clips: [] };
@@ -313,7 +436,7 @@ export async function generateAiShotClips({ enabled, storyboard, script, topic, 
     };
   }
   const provider = providerConfig.provider || "openai";
-  if (!["openai", "aliyun-wanxiang"].includes(provider)) {
+  if (!["openai", "aliyun-wanxiang", "volcengine"].includes(provider)) {
     return unsupportedProviderResult(providerConfig);
   }
 
@@ -324,12 +447,16 @@ export async function generateAiShotClips({ enabled, storyboard, script, topic, 
     const outputPath = join(outputDir, outputFileName);
     const prompt = provider === "aliyun-wanxiang"
       ? aliyunShotPrompt({ topic, script, shot })
-      : shotPrompt({ topic, script, shot });
+      : provider === "volcengine"
+        ? volcengineShotPrompt({ topic, script, shot })
+        : shotPrompt({ topic, script, shot });
     try {
       const clipArgs = { shot, prompt, outputPath, clipUrl: `${publicBaseUrl}/${outputFileName}`, providerConfig };
       clips.push(provider === "aliyun-wanxiang"
         ? await generateAliyunWanxiangShotClip(clipArgs)
-        : await generateOpenaiShotClip(clipArgs));
+        : provider === "volcengine"
+          ? await generateVolcengineShotClip(clipArgs)
+          : await generateOpenaiShotClip(clipArgs));
     } catch (error) {
       clips.push({
         shotNo: shot.shotNo,

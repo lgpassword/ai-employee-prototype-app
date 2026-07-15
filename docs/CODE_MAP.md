@@ -63,7 +63,7 @@ This document explains what each source file contains, what it does, and which b
 
 | File | Contains | Role | Main Flow |
 | --- | --- | --- | --- |
-| `src/services/ai-video-service.js` | OpenAI/Aliyun video provider adapters, polling, remote clip download. | Real AI video clip generation adapter. | AI video rendering with provider clips. |
+| `src/services/ai-video-service.js` | OpenAI, Aliyun Wanxiang, Volcengine Seedance video provider adapters, polling, remote clip download. | Real AI video clip generation adapter. | AI video rendering with provider clips. |
 | `src/services/scenario-research.js` | Usage scenario rules, online search parsing, scenario generation. | Product usage scenario analysis. | AI video > scenario analysis. |
 | `src/services/text-generation-service.js` | Text model chat completion calls, prompt building, JSON extraction. | AI script/storyboard generation adapter. | AI video > script and storyboard generation. |
 | `src/services/tts-service.js` | Local Windows TTS, OpenAI/Qwen/Doubao voice adapters, SSML generation. | Voice generation adapter. | AI video > voice generation. |
