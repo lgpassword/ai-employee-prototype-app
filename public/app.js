@@ -47,6 +47,8 @@ let currentVideoDraft = null;
 let activeVideoTab = "script";
 /** Cached async AI video render jobs. / AI 视频异步渲染任务缓存。 */
 let currentVideoRenderJobs = [];
+/** Pending refresh timer for async video jobs. / 异步视频任务刷新计时器。 */
+let videoJobRefreshTimer = null;
 /** Scenario analysis result for video copy. / 文案使用场景分析结果。 */
 let scenarioAnalysis = null;
 /** Selected usage scenarios used by script generation. / 用户选择并用于脚本生成的使用场景。 */
@@ -804,7 +806,7 @@ function renderVideoRenderJobs(jobs = []) {
               <span>${escapeHtml(job.draftId)}</span>
               <span>${escapeHtml(job.status)}</span>
               <span>${escapeHtml(job.result?.costText || "待统计")}</span>
-              <span>${job.status === "failed" ? `<button class="filter-tab" data-retry-render-job="${escapeHtml(job.id)}" type="button">重试</button>` : escapeHtml(job.error || job.finishedAt || job.startedAt || "等待")}</span>
+              <span>${renderVideoJobAction(job)}</span>
             </div>
           `).join("")}
         </div>
@@ -816,6 +818,29 @@ function renderVideoRenderJobs(jobs = []) {
       `}
     </div>
   `;
+}
+
+function renderVideoJobAction(job) {
+  if (job.status === "completed" && job.result?.videoUrl) {
+    return `<a href="${escapeHtml(job.result.videoUrl)}" target="_blank" rel="noreferrer">查看视频</a>${job.result.audioUrl ? ` / <a href="${escapeHtml(job.result.audioUrl)}" target="_blank" rel="noreferrer">试听音频</a>` : ""}`;
+  }
+  if (job.status === "failed") {
+    return `<button class="filter-tab" data-retry-render-job="${escapeHtml(job.id)}" type="button">重试</button>${job.error ? ` <span>${escapeHtml(job.error)}</span>` : ""}`;
+  }
+  return escapeHtml(job.startedAt || job.createdAt || "等待");
+}
+
+function scheduleVideoJobRefresh(jobs = []) {
+  if (videoJobRefreshTimer) {
+    clearTimeout(videoJobRefreshTimer);
+    videoJobRefreshTimer = null;
+  }
+  if (!jobs.some((job) => ["queued", "running"].includes(job.status))) return;
+  videoJobRefreshTimer = setTimeout(() => {
+    if (document.querySelector(".video-job-board")) {
+      renderAiVideo().catch((error) => setStatus(error.message));
+    }
+  }, 2500);
 }
 
 async function retryRenderJob(id) {
@@ -1813,6 +1838,7 @@ async function renderAiVideo() {
   const settings = await api("/api/settings");
   const jobsPayload = await api("/api/videos/render-jobs");
   currentVideoRenderJobs = jobsPayload.items || [];
+  scheduleVideoJobRefresh(currentVideoRenderJobs);
   $("#mainContent").innerHTML = `
     ${renderSectionHeader("AI 视频生成", '<button class="filter-tab" data-open-ai-video-config type="button">配置模型</button>')}
     ${renderFlowSteps("copy")}

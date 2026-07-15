@@ -321,6 +321,7 @@ export async function renderVideoWithVoice(payload) {
     audioUrl,
     videoUrl,
     previewUrl: videoUrl,
+    costText: aiVideo.requested && aiVideo.status === "completed" ? "本地合成 ¥0；AI 镜头按供应商账单统计" : "本地合成 ¥0",
     message: aiVideo.requested && aiVideo.status === "completed" ? "已按真实配音时长同步生成 AI 镜头片段、字幕、逐镜头配音和本地 MP4 视频。" : "已按真实配音时长同步生成字幕、逐镜头配音和本地 MP4 视频；AI 镜头视频未启用或未配置。",
     createdAt: new Date().toISOString()
   };
