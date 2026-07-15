@@ -200,9 +200,9 @@ The repository includes:
 .github/pull_request_template.md
 ```
 
-To make sure only the owner can upload code to `main`, enable branch protection in GitHub repository settings and restrict push access to `lgpassword`.
+For this personal GitHub repository, only the owner has write access by default. Keep collaborators without write permission, enable branch protection for `main`, and disable force pushes and branch deletion.
 
-要确保只有所有者可以向 `main` 上传代码，需要在 GitHub 仓库设置中启用分支保护，并将 push 权限限制为 `lgpassword`。
+对于个人 GitHub 仓库，默认只有所有者拥有写权限。不要添加具备写权限的协作者，同时为 `main` 启用分支保护，禁止强制推送和删除分支。
 
 ## License / 开源协议
 

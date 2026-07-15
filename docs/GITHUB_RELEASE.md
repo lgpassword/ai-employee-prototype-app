@@ -52,6 +52,22 @@ Requirement: only the project owner should be able to upload code to `main`.
 
 要求：只有项目所有者可以向 `main` 上传代码。
 
+For a personal GitHub repository, GitHub does not support branch push restrictions by individual user. The practical setup is:
+
+个人 GitHub 仓库不支持按个人用户配置分支 push 限制。实际方案是：
+
+- keep the repository under the owner account;
+- do not add collaborators with write permission;
+- protect `main` from force pushes and deletion;
+- use `CODEOWNERS` and pull request templates for future review workflows.
+
+即：
+
+- 仓库放在所有者账号下；
+- 不添加拥有写权限的协作者；
+- 保护 `main`，禁止强制推送和删除；
+- 使用 `CODEOWNERS` 和 PR 模板辅助后续审核流程。
+
 Recommended GitHub settings:
 
 1. Open GitHub repository settings.
@@ -60,8 +76,6 @@ Recommended GitHub settings:
 4. Enable:
    - Require a pull request before merging.
    - Require approvals.
-   - Restrict who can push to matching branches.
-   - Allow only user `lgpassword`.
    - Do not allow force pushes.
    - Do not allow deletions.
 5. Save the rule.
@@ -74,8 +88,6 @@ Recommended GitHub settings:
 4. 开启：
    - 合并前必须创建 Pull Request。
    - 必须审批。
-   - 限制谁可以 push 到该分支。
-   - 只允许 `lgpassword`。
    - 禁止强制推送。
    - 禁止删除分支。
 5. 保存规则。
