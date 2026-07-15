@@ -1685,7 +1685,8 @@ async function refreshSession(options = {}) {
   updateHeaderSession();
   document.querySelectorAll(".merchant-only").forEach((item) => item.classList.toggle("hidden", session.userType !== "merchant"));
   if (loggedIn && navigate) {
-    await showPage(session.userType === "merchant" ? "merchant" : "dashboard");
+    const requestedPage = new URLSearchParams(window.location.search).get("page");
+    await showPage(requestedPage || (session.userType === "merchant" ? "merchant" : "dashboard"));
   }
 }
 
