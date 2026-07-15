@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI员工系统 - 多平台内容管理</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <section id="loginScreen" class="login-screen">
+      <div class="login-bg-lines" aria-hidden="true"></div>
+      <div class="login-panel">
+        <div class="login-brand-row">
+          <div class="login-mark">AI</div>
+          <div>
+            <div class="login-brand">AI员工系统</div>
+            <span>多平台内容、客户与经营工作台</span>
+          </div>
+        </div>
+        <h1>账号登录</h1>
+        <p>系统会按账号控制可使用时间、内容搜索额度、脚本草稿额度和视频生成额度。</p>
+        <form id="loginForm" class="login-form">
+          <div class="login-fields">
+            <label>
+              <span>账号</span>
+              <input id="loginUsername" class="form-input" autocomplete="username" value="admin" placeholder="请输入账号">
+            </label>
+            <label>
+              <span>密码</span>
+              <input id="loginPassword" class="form-input" type="password" autocomplete="current-password" value="admin123" placeholder="请输入密码">
+            </label>
+            <label>
+              <span>身份</span>
+              <select id="loginUserType" class="form-select">
+                <option value="merchant">商户用户</option>
+                <option value="personal">个人用户</option>
+              </select>
+            </label>
+          </div>
+          <button id="loginButton" class="btn login-submit" type="submit">登录系统</button>
+        </form>
+        <div class="login-account-tips">
+          <div><strong>管理员</strong><span>admin / admin123，可配置用户期限和额度。</span></div>
+          <div><strong>个人用户</strong><span>user / user123，仅使用个人能力。</span></div>
+          <div><strong>商户用户</strong><span>merchant / merchant123，可进入商户模块。</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="container">
+      <aside class="sidebar">
+        <div class="logo">
+          <div class="logo-icon">🤖</div>
+          <span>AI员工系统</span>
+        </div>
+        <nav class="nav" id="nav">
+          <div class="nav-group">
+            <div class="nav-group-title">总览</div>
+            <button class="nav-item active" data-page="dashboard" type="button"><span class="nav-icon">📊</span><span>数据仪表板</span></button>
+            <button class="nav-item merchant-only" data-page="operations" type="button"><span class="nav-icon">📈</span><span>经营分析</span></button>
+          </div>
+          <div class="nav-group">
+            <div class="nav-group-title">内容运营</div>
+            <button class="nav-item" data-page="content" type="button"><span class="nav-icon">🔍</span><span>内容搜索</span></button>
+            <button class="nav-item" data-page="aivideo" type="button"><span class="nav-icon">🎬</span><span>AI视频生成</span></button>
+            <button class="nav-item merchant-only" data-page="publishing" type="button"><span class="nav-icon">🗓️</span><span>内容运营</span></button>
+          </div>
+          <div class="nav-group merchant-only">
+            <div class="nav-group-title">生意增长</div>
+            <button class="nav-item" data-page="products" type="button"><span class="nav-icon">🧾</span><span>商品选品</span></button>
+            <button class="nav-item" data-page="creators" type="button"><span class="nav-icon">🤝</span><span>达人合作</span></button>
+            <button class="nav-item" data-page="orders" type="button"><span class="nav-icon">📦</span><span>订单库存</span></button>
+            <button class="nav-item" data-page="finance" type="button"><span class="nav-icon">💰</span><span>财务结算</span></button>
+          </div>
+          <div class="nav-group">
+            <div class="nav-group-title">客户与系统</div>
+            <button class="nav-item" data-page="messages" type="button"><span class="nav-icon">💬</span><span>客户管理</span></button>
+            <button class="nav-item" data-page="live" type="button"><span class="nav-icon">📡</span><span>直播数据</span></button>
+            <button class="nav-item" data-page="sales" type="button"><span class="nav-icon">💹</span><span>销售分析</span></button>
+            <button class="nav-item merchant-only" data-page="merchant" type="button"><span class="nav-icon">🏢</span><span>商户入驻</span></button>
+            <button class="nav-item merchant-only" data-page="team" type="button"><span class="nav-icon">👥</span><span>团队权限</span></button>
+          </div>
+        </nav>
+      </aside>
+
+      <div class="main-content">
+        <header class="header">
+          <div class="header-left">
+            <h1 id="pageTitle">数据仪表板</h1>
+            <div id="status" class="status">正在加载</div>
+          </div>
+          <div class="header-right">
+            <div id="userTypeBadge" class="identity-badge">未登录</div>
+            <div id="quotaSummary" class="quota-strip compact hidden"></div>
+            <button id="settingsMenuButton" class="header-icon-btn" type="button" title="系统配置">⚙</button>
+            <div id="settingsMenu" class="header-menu hidden">
+              <button data-open-setting="users" type="button">用户权限与额度</button>
+              <button data-open-setting="accounts" type="button">平台账号</button>
+              <button data-open-setting="douyin" type="button">抖音授权</button>
+              <button data-open-setting="knowledge" type="button">企业知识库</button>
+              <button data-open-setting="customerAi" type="button">客户AI回复</button>
+              <button data-open-setting="text" type="button">脚本模型</button>
+              <button data-open-setting="voice" type="button">配音模型</button>
+              <button data-open-setting="video" type="button">视频供应商</button>
+            </div>
+            <button class="notification-btn" type="button">🔔</button>
+            <button id="avatarMenuButton" class="user-avatar" type="button">U</button>
+            <div id="avatarMenu" class="header-menu avatar-menu hidden">
+              <button data-switch-account type="button">切换账号</button>
+              <button data-open-profile type="button">个人信息</button>
+              <button data-change-password type="button">修改密码</button>
+              <button id="logoutButton" type="button">退出登录</button>
+            </div>
+          </div>
+        </header>
+
+        <main class="content" id="mainContent"></main>
+      </div>
+    </div>
+
+    <div id="renderModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close-render-modal></div>
+      <div class="modal-panel">
+        <h3>生成视频与声音</h3>
+        <p>系统会使用你当前编辑后的脚本和分镜生成本地 MP4 视频，并调用本机语音生成 WAV 声音。当前画面来自分镜文字，上传产品素材后可合成真实商品画面。</p>
+        <div class="form-group">
+          <label class="form-label">声音类型</label>
+          <select id="voiceName" class="form-select">
+            <option>自然女声 - 亲和讲解</option>
+            <option>自然男声 - 沉稳讲解</option>
+            <option>活泼女声 - 轻快推荐</option>
+            <option>商务男声 - 稳重成交</option>
+          </select>
+        </div>
+        <label class="modal-check">
+          <input id="useAiVideoClips" type="checkbox">
+          <span>
+            <strong>使用 AI 生成镜头画面</strong>
+            <small>当前已接入 OpenAI 和通义万相。其他国内供应商适配器接入前会回退到本地分镜视频。</small>
+          </span>
+        </label>
+        <div class="modal-actions">
+          <button class="filter-tab" data-close-render-modal type="button">取消</button>
+          <button id="confirmRenderButton" class="btn" type="button">确认生成</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="appModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close-app-modal></div>
+      <div id="appModalPanel" class="modal-panel">
+        <div class="modal-title-row">
+          <h3 id="appModalTitle"></h3>
+          <button class="icon-button" data-close-app-modal type="button">×</button>
+        </div>
+        <div id="appModalBody"></div>
+      </div>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
