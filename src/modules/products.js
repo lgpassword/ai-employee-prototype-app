@@ -1,4 +1,4 @@
-import { platformName } from "../store.js";
+import { platformName } from "../db/index.js";
 
 // 商品选品模块：负责选品榜单、商品详情、竞品、多平台链接和带货视频的本地闭环数据。
 const productCatalog = [
@@ -183,3 +183,4 @@ export function getProductDetail(id) {
     platformLinks: buildPlatformLinks(item)
   };
 }
+

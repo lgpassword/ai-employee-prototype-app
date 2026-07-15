@@ -1,4 +1,4 @@
-import { nextId, store } from "../store.js";
+import { db, nextId } from "../db/index.js";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateSpeechFile } from "../services/tts-service.js";
@@ -11,7 +11,7 @@ const generatedDir = fileURLToPath(new URL("../../public/generated", import.meta
 
 // AI 视频模块：对应原型的 AI 视频生成页，生成的是可编辑任务草稿。
 export function listGeneratedVideos() {
-  return store.generatedVideos;
+  return db.generatedVideos;
 }
 
 function parseDurationSeconds(value) {
@@ -120,7 +120,7 @@ export async function createVideoDraft(payload) {
     fallback: { script: fallbackScript, storyboard: fallbackStoryboard }
   });
   const item = {
-    id: nextId("gen", store.generatedVideos),
+    id: nextId("gen", db.generatedVideos),
     topic,
     style,
     duration: durationText,
@@ -133,7 +133,7 @@ export async function createVideoDraft(payload) {
     renderTask: null,
     createdAt: new Date().toISOString()
   };
-  store.generatedVideos.unshift(item);
+  db.generatedVideos.unshift(item);
   return item;
 }
 
@@ -231,7 +231,7 @@ function safeTaskDirectoryName(value) {
 
 export async function renderVideoWithVoice(payload) {
   const id = String(payload.id || "").trim();
-  const draft = store.generatedVideos.find((item) => item.id === id);
+  const draft = db.generatedVideos.find((item) => item.id === id);
   if (!draft) {
     throw new Error("视频草稿不存在");
   }
@@ -246,7 +246,7 @@ export async function renderVideoWithVoice(payload) {
   if (!voiceText) {
     throw new Error("请至少保留一段字幕或脚本文案用于生成声音");
   }
-  const taskId = nextId("render", store.generatedVideos);
+  const taskId = nextId("render", db.generatedVideos);
   const outputName = safeTaskDirectoryName(`${id}_${taskId}`);
   const outputDir = join(generatedDir, outputName);
   const audioPath = join(outputDir, "voice.wav");
@@ -320,3 +320,4 @@ export async function renderVideoWithVoice(payload) {
   draft.status = "rendered";
   return draft;
 }
+

@@ -1,4 +1,4 @@
-import { platformName, store } from "../store.js";
+import { db, platformName } from "../db/index.js";
 
 // 内容创作与发布模块：负责爆款分析、定时发布和多平台自动发布的本地闭环。
 const platformAliases = {
@@ -47,7 +47,7 @@ function uniquePlatforms(platforms) {
 }
 
 function connectedAccount(platform) {
-  return store.accounts.find((item) => item.platform === platform && item.status === "connected");
+  return db.accounts.find((item) => item.platform === platform && item.status === "connected");
 }
 
 function buildPlatformResults(platforms, autoPublish) {
@@ -142,3 +142,4 @@ export function triggerPublishPlan(id) {
   plan.status = plan.platformResults.every((item) => item.connected) ? "已提交平台队列" : "部分平台待授权";
   return publicPlan(plan);
 }
+

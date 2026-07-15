@@ -1,4 +1,4 @@
-import { platformName, store } from "../store.js";
+import { db, platformName } from "../db/index.js";
 
 // 客户消息模块：对应客户消息页，闭环包含平台消息接收、发送回复、AI 建议和本地适配器同步状态。
 
@@ -8,7 +8,7 @@ import { platformName, store } from "../store.js";
  * 返回客户会话列表，并补齐平台名称、回复目标和平台跳转地址。
  */
 export function listConversations() {
-  return store.conversations.map((item) => ({
+  return db.conversations.map((item) => ({
     ...item,
     platformName: platformName(item.platform),
     replyTarget: `${platformName(item.platform)}私信/评论`,
@@ -22,7 +22,7 @@ export function listConversations() {
  * 根据会话 ID 查找会话。
  */
 export function findConversation(id) {
-  return store.conversations.find((item) => item.id === id) || null;
+  return db.conversations.find((item) => item.id === id) || null;
 }
 
 /** Build localized timestamp text. / 生成本地化时间文本。 */
@@ -51,8 +51,8 @@ function platformEntryUrl(conversation) {
  * 解析平台连接状态。未授权不阻断业务链路，只影响是否能切换官方适配器。
  */
 function platformConnection(platform) {
-  const account = store.accounts.find((item) => item.platform === platform);
-  const douyinAuthorized = platform === "douyin" && Boolean(store.douyinOAuth?.accessToken);
+  const account = db.accounts.find((item) => item.platform === platform);
+  const douyinAuthorized = platform === "douyin" && Boolean(db.douyinOAuth?.accessToken);
   const connected = douyinAuthorized || account?.status === "connected";
   return {
     platform,
@@ -81,7 +81,7 @@ function normalizeAttachments(value) {
 
 /** Build next local conversation id. / 生成本地会话 ID。 */
 function nextConversationId() {
-  return `conv_${store.conversations.length + 1}_${Date.now()}`;
+  return `conv_${db.conversations.length + 1}_${Date.now()}`;
 }
 
 /**
@@ -98,7 +98,7 @@ function findOrCreateInboundConversation(payload) {
   const platform = String(payload.platform || "douyin").trim();
   const externalUserId = String(payload.externalUserId || "").trim();
   const existingByExternalId = externalUserId
-    ? store.conversations.find((item) => item.platform === platform && item.externalUserId === externalUserId)
+    ? db.conversations.find((item) => item.platform === platform && item.externalUserId === externalUserId)
     : null;
   if (existingByExternalId) return existingByExternalId;
 
@@ -114,9 +114,9 @@ function findOrCreateInboundConversation(payload) {
     tags: ["平台消息"],
     group: "新客户",
     lifecycle: "新线索",
-    autoReply: Boolean(store.settings.customerAi?.enabled)
+    autoReply: Boolean(db.settings.customerAi?.enabled)
   };
-  store.conversations.unshift(conversation);
+  db.conversations.unshift(conversation);
   return conversation;
 }
 
@@ -148,7 +148,7 @@ export function sendReply(id, text) {
     throw new Error("回复内容不能为空");
   }
 
-  const platformSync = Boolean(store.settings.customerAi?.platformSync);
+  const platformSync = Boolean(db.settings.customerAi?.platformSync);
   conversation.messages.push({
     id: `msg_${Date.now()}`,
     role: "agent",
@@ -180,7 +180,7 @@ export function sendPlatformReply(id, payload = {}) {
     throw new Error("回复内容不能为空");
   }
 
-  const platformSync = Boolean(store.settings.customerAi?.platformSync);
+  const platformSync = Boolean(db.settings.customerAi?.platformSync);
   const connection = platformConnection(conversation.platform);
   const syncStatus = !platformSync
     ? "仅本地保存"
@@ -285,8 +285,8 @@ export function buildAutoReplySuggestion(id) {
   if (!conversation) {
     throw new Error("会话不存在");
   }
-  const config = store.settings.customerAi || {};
-  const knowledge = store.settings.knowledgeBase ? `结合企业知识库：${store.settings.knowledgeBase.slice(0, 80)}` : "结合当前商品卖点";
+  const config = db.settings.customerAi || {};
+  const knowledge = db.settings.knowledgeBase ? `结合企业知识库：${db.settings.knowledgeBase.slice(0, 80)}` : "结合当前商品卖点";
   conversation.aiSuggestion = `${config.tone || "专业、亲和"}回复：${knowledge}。针对客户“${conversation.lastMessage}”，先直接回答问题，再引导确认尺码、数量或收货场景。`;
   conversation.status = "ai_drafting";
   return conversation;
@@ -317,3 +317,4 @@ export function updateCustomerProfile(id, payload) {
   conversation.autoReply = Boolean(payload.autoReply);
   return conversation;
 }
+

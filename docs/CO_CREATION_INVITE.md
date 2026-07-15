@@ -350,13 +350,13 @@ Recommended path:
 Inbound:
 
 ```text
-platform message -> /api/platform-messaging/inbound -> messages.js -> store.conversations -> customer management page
+platform message -> /api/platform-messaging/inbound -> messages.js -> db.conversations -> customer management page
 ```
 
 入站：
 
 ```text
-平台消息 -> /api/platform-messaging/inbound -> messages.js -> store.conversations -> 客户管理页
+平台消息 -> /api/platform-messaging/inbound -> messages.js -> db.conversations -> 客户管理页
 ```
 
 Outbound:
@@ -393,12 +393,14 @@ Browser UI
   -> src/server.js
   -> src/modules/*
   -> src/services/*
-  -> src/store.js
+  -> src/db/index.js
+  -> src/db/state.js
+  -> src/db/json-store.js
 ```
 
-Current storage is in memory. This keeps the prototype easy to run and easy to modify. A production version should replace `src/store.js` with a database layer.
+Current storage is isolated under `src/db/`. Business modules call the database facade in `src/db/index.js`; runtime state and demo seed data live in `src/db/state.js`; local JSON persistence lives in `src/db/json-store.js`. A production version can replace this adapter with SQLite/PostgreSQL repositories.
 
-当前使用内存数据，便于本地运行和快速修改。生产版本应将 `src/store.js` 替换为数据库层。
+当前数据已经收敛到 `src/db/`。业务模块统一调用 `src/db/index.js`，运行时状态和演示种子数据在 `src/db/state.js`，本地 JSON 持久化在 `src/db/json-store.js`。生产版本可以继续替换为 SQLite/PostgreSQL repository。
 
 ## 6. Co-Creation Directions / 共创方向
 
@@ -406,7 +408,7 @@ Recommended areas for contributors:
 
 欢迎共创的方向：
 
-1. Replace in-memory store with SQLite/PostgreSQL.
+1. Replace the local JSON database adapter with SQLite/PostgreSQL.
 2. Connect real Douyin/Kuaishou/Xiaohongshu message APIs.
 3. Add real media upload storage.
 4. Add user registration and password reset.

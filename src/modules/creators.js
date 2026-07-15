@@ -1,4 +1,4 @@
-import { platformName } from "../store.js";
+import { platformName } from "../db/index.js";
 
 // 达人合作模块：负责达人筛选、详情和合作流程的本地闭环。
 const creators = [
@@ -177,3 +177,4 @@ export function startCooperation(id) {
   creator.cooperationStatus = "合作洽谈中";
   return record;
 }
+

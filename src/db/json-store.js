@@ -1,12 +1,14 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { store } from "../store.js";
+import { getDatabaseState } from "./index.js";
 
 /** 项目根目录，用于定位本地运行时数据目录。 */
 const projectDir = fileURLToPath(new URL("../../", import.meta.url));
 /** 本地快照文件路径；`.local` 已在 `.gitignore` 中排除。 */
 const snapshotPath = join(projectDir, ".local", "store.json");
+/** 数据库运行时状态对象，由数据库门面统一提供。 */
+const state = getDatabaseState();
 /** 最近一次持久化操作状态，供接口和日志展示。 */
 let lastPersistenceStatus = {
   mode: "local-json",
@@ -38,7 +40,7 @@ function mergeState(target, source) {
 
 /** 构造可写入磁盘的业务快照；全局登录态不持久化。 */
 function buildSnapshot() {
-  const { session, ...businessState } = store;
+  const { session, ...businessState } = state;
   return {
     version: 1,
     savedAt: new Date().toISOString(),
@@ -64,7 +66,7 @@ export function loadPersistentStore() {
     if (!isPlainObject(snapshot.state)) {
       throw new Error("快照格式缺少 state 对象");
     }
-    mergeState(store, snapshot.state);
+    mergeState(state, snapshot.state);
     lastPersistenceStatus = {
       mode: "local-json",
       loaded: true,

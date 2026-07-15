@@ -1,4 +1,4 @@
-import { store } from "../store.js";
+import { db } from "../db/index.js";
 
 const quotaLabels = {
   contentSearches: "内容搜索",
@@ -25,11 +25,11 @@ function todayText() {
 
 function findUserByUsername(username) {
   const normalized = String(username || "").trim().toLowerCase();
-  return store.users.find((item) => item.username.toLowerCase() === normalized);
+  return db.users.find((item) => item.username.toLowerCase() === normalized);
 }
 
 function findUserById(userId) {
-  return store.users.find((item) => item.id === userId);
+  return db.users.find((item) => item.id === userId);
 }
 
 function isExpired(user) {
@@ -79,13 +79,13 @@ function sessionForUser(user) {
 }
 
 function refreshCurrentSession() {
-  const user = findUserById(store.session.userId);
+  const user = findUserById(db.session.userId);
   if (!user) {
-    store.session = emptySession();
-    return store.session;
+    db.session = emptySession();
+    return db.session;
   }
-  store.session = {
-    ...store.session,
+  db.session = {
+    ...db.session,
     username: user.username,
     userType: user.userType,
     role: user.role,
@@ -93,11 +93,11 @@ function refreshCurrentSession() {
     expiresAt: user.expiresAt,
     quota: normalizeQuota(user.quotas)
   };
-  return store.session;
+  return db.session;
 }
 
 export function assertActiveSession() {
-  const user = findUserById(store.session.userId);
+  const user = findUserById(db.session.userId);
   if (!user) {
     throw new Error("请先登录后再使用系统");
   }
@@ -150,13 +150,13 @@ export function login(payload) {
     throw new Error("当前账号已到期，请联系管理员续期");
   }
 
-  store.session = sessionForUser(user);
-  return store.session;
+  db.session = sessionForUser(user);
+  return db.session;
 }
 
 export function logout() {
-  store.session = emptySession();
-  return store.session;
+  db.session = emptySession();
+  return db.session;
 }
 
 export function getSession() {
@@ -168,7 +168,7 @@ export function getUsers() {
   if (current.role !== "admin") {
     throw new Error("只有管理员可以查看用户额度配置");
   }
-  return store.users.map(publicUser);
+  return db.users.map(publicUser);
 }
 
 export function updateUserAccess(payload) {
@@ -194,22 +194,22 @@ export function updateUserAccess(payload) {
       used: Math.max(0, Number(quotas[key].used ?? user.quotas[key]?.used ?? 0))
     };
   });
-  if (store.session.userId === user.id) {
+  if (db.session.userId === user.id) {
     refreshCurrentSession();
   }
   return publicUser(user);
 }
 
 export function getMerchantOnboarding() {
-  return store.merchantOnboarding;
+  return db.merchantOnboarding;
 }
 
 export function saveMerchantProfile(payload) {
-  store.merchantOnboarding.businessName = String(payload.businessName || "").trim();
-  store.merchantOnboarding.unifiedSocialCreditCode = String(payload.unifiedSocialCreditCode || "").trim();
-  store.merchantOnboarding.contactName = String(payload.contactName || "").trim();
-  store.merchantOnboarding.contactPhone = String(payload.contactPhone || "").trim();
-  return store.merchantOnboarding;
+  db.merchantOnboarding.businessName = String(payload.businessName || "").trim();
+  db.merchantOnboarding.unifiedSocialCreditCode = String(payload.unifiedSocialCreditCode || "").trim();
+  db.merchantOnboarding.contactName = String(payload.contactName || "").trim();
+  db.merchantOnboarding.contactPhone = String(payload.contactPhone || "").trim();
+  return db.merchantOnboarding;
 }
 
 function buildCode(prefix) {
@@ -235,19 +235,19 @@ function ensureRequiredMaterials(platform) {
 }
 
 export function submitPlatformReview(platformCode) {
-  const platform = store.merchantOnboarding.platforms.find((item) => item.platform === platformCode);
+  const platform = db.merchantOnboarding.platforms.find((item) => item.platform === platformCode);
   if (!platform) {
     throw new Error("平台不存在");
   }
-  if (!store.merchantOnboarding.businessName || !store.merchantOnboarding.unifiedSocialCreditCode) {
+  if (!db.merchantOnboarding.businessName || !db.merchantOnboarding.unifiedSocialCreditCode) {
     throw new Error("请先填写企业名称和统一社会信用代码");
   }
   if (!ensureRequiredMaterials(platform)) {
     throw new Error("请先上传该平台必填资料");
   }
 
-  if (!store.merchantOnboarding.merchantCode) {
-    store.merchantOnboarding.merchantCode = buildCode("MCH");
+  if (!db.merchantOnboarding.merchantCode) {
+    db.merchantOnboarding.merchantCode = buildCode("MCH");
   }
   platform.applicationNo = platform.applicationNo || buildCode(`APP_${platform.platform.toUpperCase()}_`);
   platform.status = "reviewing";
@@ -256,7 +256,7 @@ export function submitPlatformReview(platformCode) {
   platform.authorizationCode = "";
 
   return {
-    merchantCode: store.merchantOnboarding.merchantCode,
+    merchantCode: db.merchantOnboarding.merchantCode,
     applicationNo: platform.applicationNo,
     platform: platform.platform,
     platformName: platform.platformName,
@@ -268,7 +268,7 @@ export function submitPlatformReview(platformCode) {
 }
 
 export function approvePlatformReview(platformCode) {
-  const platform = store.merchantOnboarding.platforms.find((item) => item.platform === platformCode);
+  const platform = db.merchantOnboarding.platforms.find((item) => item.platform === platformCode);
   if (!platform) {
     throw new Error("平台不存在");
   }
@@ -279,7 +279,7 @@ export function approvePlatformReview(platformCode) {
   platform.status = "approved";
   platform.canAuthorize = true;
   return {
-    merchantCode: store.merchantOnboarding.merchantCode,
+    merchantCode: db.merchantOnboarding.merchantCode,
     applicationNo: platform.applicationNo,
     platform: platform.platform,
     platformName: platform.platformName,
@@ -291,13 +291,13 @@ export function approvePlatformReview(platformCode) {
 }
 
 export function getAuthorizationCode(platformCode) {
-  const platform = store.merchantOnboarding.platforms.find((item) => item.platform === platformCode);
+  const platform = db.merchantOnboarding.platforms.find((item) => item.platform === platformCode);
   if (!platform) {
     throw new Error("平台不存在");
   }
   if (!platform.canAuthorize) {
     return {
-      merchantCode: store.merchantOnboarding.merchantCode,
+      merchantCode: db.merchantOnboarding.merchantCode,
       applicationNo: platform.applicationNo,
       platform: platform.platform,
       platformName: platform.platformName,
@@ -311,7 +311,7 @@ export function getAuthorizationCode(platformCode) {
 
   platform.authorizationCode = platform.authorizationCode || buildCode(`CODE_${platform.platform.toUpperCase()}_`);
   return {
-    merchantCode: store.merchantOnboarding.merchantCode,
+    merchantCode: db.merchantOnboarding.merchantCode,
     applicationNo: platform.applicationNo,
     platform: platform.platform,
     platformName: platform.platformName,
@@ -327,7 +327,7 @@ export function markMaterialUploaded(payload) {
   const platformCode = String(payload.platform || "").trim();
   const materialKey = String(payload.materialKey || "").trim();
   const fileName = String(payload.fileName || "").trim();
-  const platform = store.merchantOnboarding.platforms.find((item) => item.platform === platformCode);
+  const platform = db.merchantOnboarding.platforms.find((item) => item.platform === platformCode);
   if (!platform) {
     throw new Error("平台不存在");
   }
@@ -342,3 +342,4 @@ export function markMaterialUploaded(payload) {
   platform.status = platform.materials.filter((item) => item.required).every((item) => item.uploaded) ? "ready" : "pending";
   return platform;
 }
+

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { store } from "../store.js";
+import { db } from "../db/index.js";
 
 const oauthFile = fileURLToPath(new URL("../../.local/douyin-oauth.json", import.meta.url));
 const authorizeEndpoint = "https://open.douyin.com/platform/oauth/connect";
@@ -15,17 +15,17 @@ function loadPersistedOAuth() {
   if (!existsSync(oauthFile)) return;
   try {
     const payload = JSON.parse(readFileSync(oauthFile, "utf8"));
-    store.douyinOAuth = {
-      ...store.douyinOAuth,
+    db.douyinOAuth = {
+      ...db.douyinOAuth,
       ...payload,
       account: {
-        ...store.douyinOAuth.account,
+        ...db.douyinOAuth.account,
         ...(payload.account || {})
       }
     };
     syncDouyinAccountFromStore();
   } catch {
-    store.douyinOAuth.lastError = "本地抖音授权文件读取失败，请重新保存配置。";
+    db.douyinOAuth.lastError = "本地抖音授权文件读取失败，请重新保存配置。";
   }
 }
 
@@ -33,7 +33,7 @@ loadPersistedOAuth();
 
 async function persistOAuth() {
   await mkdir(dirname(oauthFile), { recursive: true });
-  await writeFile(oauthFile, JSON.stringify(store.douyinOAuth, null, 2), "utf8");
+  await writeFile(oauthFile, JSON.stringify(db.douyinOAuth, null, 2), "utf8");
 }
 
 function env(name) {
@@ -46,7 +46,7 @@ function defaultRedirectUri() {
 }
 
 function effectiveConfig() {
-  const current = store.douyinOAuth;
+  const current = db.douyinOAuth;
   return {
     clientKey: current.clientKey || env("DOUYIN_CLIENT_KEY") || env("DOUYIN_APP_KEY"),
     clientSecret: current.clientSecret || env("DOUYIN_CLIENT_SECRET") || env("DOUYIN_APP_SECRET"),
@@ -75,7 +75,7 @@ function isFuture(value) {
 }
 
 function hasToken() {
-  return Boolean(store.douyinOAuth.accessToken && store.douyinOAuth.openId);
+  return Boolean(db.douyinOAuth.accessToken && db.douyinOAuth.openId);
 }
 
 function safeEqual(a, b) {
@@ -96,7 +96,7 @@ function assertConfigured() {
 }
 
 function assertValidState(state) {
-  const current = store.douyinOAuth;
+  const current = db.douyinOAuth;
   if (!current.pendingState || !safeEqual(current.pendingState, state)) {
     throw new Error("抖音授权 state 校验失败，请重新发起授权");
   }
@@ -138,7 +138,7 @@ async function fetchUserInfo(accessToken) {
       "content-type": "application/x-www-form-urlencoded"
     },
     body: new URLSearchParams({
-      open_id: store.douyinOAuth.openId,
+      open_id: db.douyinOAuth.openId,
       access_token: accessToken
     })
   });
@@ -150,9 +150,9 @@ async function fetchUserInfo(accessToken) {
 }
 
 function syncDouyinAccountFromStore() {
-  const account = store.accounts.find((item) => item.platform === "douyin");
+  const account = db.accounts.find((item) => item.platform === "douyin");
   if (!account) return;
-  const oauth = store.douyinOAuth;
+  const oauth = db.douyinOAuth;
   if (hasToken()) {
     account.status = "connected";
     account.accountName = oauth.account.nickname || `open_id:${maskSecret(oauth.openId, 6)}`;
@@ -167,7 +167,7 @@ function syncDouyinAccountFromStore() {
 }
 
 function saveTokenData(data) {
-  const current = store.douyinOAuth;
+  const current = db.douyinOAuth;
   current.accessToken = String(data.access_token || "").trim();
   current.refreshToken = String(data.refresh_token || current.refreshToken || "").trim();
   current.openId = String(data.open_id || current.openId || "").trim();
@@ -182,7 +182,7 @@ function saveTokenData(data) {
 }
 
 function clearTokenData() {
-  Object.assign(store.douyinOAuth, {
+  Object.assign(db.douyinOAuth, {
     pendingState: "",
     pendingStateExpiresAt: "",
     accessToken: "",
@@ -201,7 +201,7 @@ function clearTokenData() {
 
 export function getDouyinOAuthStatus() {
   const config = effectiveConfig();
-  const oauth = store.douyinOAuth;
+  const oauth = db.douyinOAuth;
   const authorized = hasToken();
   return {
     configured: Boolean(config.clientKey && config.clientSecret),
@@ -209,9 +209,9 @@ export function getDouyinOAuthStatus() {
     accessTokenValid: authorized && isFuture(oauth.expiresAt),
     refreshTokenValid: Boolean(oauth.refreshToken && isFuture(oauth.refreshExpiresAt)),
     clientKey: config.clientKey,
-    clientKeySaved: Boolean(store.douyinOAuth.clientKey || env("DOUYIN_CLIENT_KEY") || env("DOUYIN_APP_KEY")),
+    clientKeySaved: Boolean(db.douyinOAuth.clientKey || env("DOUYIN_CLIENT_KEY") || env("DOUYIN_APP_KEY")),
     clientKeyMasked: maskSecret(config.clientKey),
-    clientSecretSaved: Boolean(store.douyinOAuth.clientSecret || env("DOUYIN_CLIENT_SECRET") || env("DOUYIN_APP_SECRET")),
+    clientSecretSaved: Boolean(db.douyinOAuth.clientSecret || env("DOUYIN_CLIENT_SECRET") || env("DOUYIN_APP_SECRET")),
     redirectUri: config.redirectUri,
     scope: config.scope,
     optionalScope: config.optionalScope,
@@ -230,7 +230,7 @@ export function getDouyinOAuthStatus() {
 }
 
 export async function saveDouyinOAuthConfig(payload) {
-  const current = store.douyinOAuth;
+  const current = db.douyinOAuth;
   const nextClientKey = String(payload.clientKey || "").trim();
   const nextClientSecret = String(payload.clientSecret || "").trim();
   const nextRedirectUri = String(payload.redirectUri || "").trim();
@@ -252,9 +252,9 @@ export async function saveDouyinOAuthConfig(payload) {
 export async function buildDouyinAuthorizeUrl() {
   const config = assertConfigured();
   const state = randomBytes(18).toString("hex");
-  store.douyinOAuth.pendingState = state;
-  store.douyinOAuth.pendingStateExpiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-  store.douyinOAuth.lastError = "";
+  db.douyinOAuth.pendingState = state;
+  db.douyinOAuth.pendingStateExpiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  db.douyinOAuth.lastError = "";
   await persistOAuth();
 
   const url = new URL(authorizeEndpoint);
@@ -270,7 +270,7 @@ export async function buildDouyinAuthorizeUrl() {
     authorizeUrl: url.toString(),
     redirectUri: config.redirectUri,
     scope: config.scope,
-    stateExpiresAt: store.douyinOAuth.pendingStateExpiresAt
+    stateExpiresAt: db.douyinOAuth.pendingStateExpiresAt
   };
 }
 
@@ -345,8 +345,8 @@ export async function searchDouyinVideos(query = {}) {
     cursor: String(query.cursor || 0),
     device_id: buildDeviceId()
   });
-  if (store.douyinOAuth.openId) {
-    params.set("open_id", store.douyinOAuth.openId);
+  if (db.douyinOAuth.openId) {
+    params.set("open_id", db.douyinOAuth.openId);
   }
   const response = await fetch(`https://open.douyin.com/dy_open_api/v2/search/video/?${params.toString()}`, {
     headers: { "access-token": clientToken }
@@ -369,13 +369,13 @@ export async function searchDouyinVideos(query = {}) {
 
 export async function refreshDouyinAccessToken() {
   const config = assertConfigured();
-  if (!store.douyinOAuth.refreshToken) {
+  if (!db.douyinOAuth.refreshToken) {
     throw new Error("抖音 refresh_token 不存在，请重新授权");
   }
   const data = await requestForm(refreshEndpoint, {
     client_key: config.clientKey,
     grant_type: "refresh_token",
-    refresh_token: store.douyinOAuth.refreshToken
+    refresh_token: db.douyinOAuth.refreshToken
   });
   saveTokenData(data);
   await persistOAuth();
@@ -383,18 +383,18 @@ export async function refreshDouyinAccessToken() {
 }
 
 export async function syncDouyinAccount() {
-  if (!store.douyinOAuth.accessToken) {
+  if (!db.douyinOAuth.accessToken) {
     throw new Error("抖音尚未授权，无法同步账号信息");
   }
-  const profile = await fetchUserInfo(store.douyinOAuth.accessToken);
-  store.douyinOAuth.account = {
-    nickname: String(profile.nickname || store.douyinOAuth.account.nickname || "").trim(),
-    avatar: String(profile.avatar || store.douyinOAuth.account.avatar || "").trim(),
-    unionId: String(profile.union_id || store.douyinOAuth.account.unionId || "").trim()
+  const profile = await fetchUserInfo(db.douyinOAuth.accessToken);
+  db.douyinOAuth.account = {
+    nickname: String(profile.nickname || db.douyinOAuth.account.nickname || "").trim(),
+    avatar: String(profile.avatar || db.douyinOAuth.account.avatar || "").trim(),
+    unionId: String(profile.union_id || db.douyinOAuth.account.unionId || "").trim()
   };
-  store.douyinOAuth.openId = String(profile.open_id || store.douyinOAuth.openId || "").trim();
-  store.douyinOAuth.updatedAt = new Date().toISOString();
-  store.douyinOAuth.lastError = "";
+  db.douyinOAuth.openId = String(profile.open_id || db.douyinOAuth.openId || "").trim();
+  db.douyinOAuth.updatedAt = new Date().toISOString();
+  db.douyinOAuth.lastError = "";
   syncDouyinAccountFromStore();
   await persistOAuth();
   return getDouyinOAuthStatus();
@@ -402,11 +402,12 @@ export async function syncDouyinAccount() {
 
 export async function disconnectDouyinOAuth(payload = {}) {
   if (payload.clearConfig) {
-    store.douyinOAuth.clientKey = "";
-    store.douyinOAuth.clientSecret = "";
-    store.douyinOAuth.redirectUri = "";
+    db.douyinOAuth.clientKey = "";
+    db.douyinOAuth.clientSecret = "";
+    db.douyinOAuth.redirectUri = "";
   }
   clearTokenData();
   await persistOAuth();
   return getDouyinOAuthStatus();
 }
+

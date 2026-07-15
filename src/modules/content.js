@@ -1,4 +1,4 @@
-import { store, platformName } from "../store.js";
+import { db, platformName } from "../db/index.js";
 import { getDouyinOAuthStatus, searchDouyinVideos } from "./douyin.js";
 
 // 内容搜索模块：对应原型的内容搜索页，只提供搜索、平台筛选、导入素材闭环。
@@ -6,7 +6,7 @@ export function listContents(query = {}) {
   const keyword = String(query.keyword || "").trim().toLowerCase();
   const platform = String(query.platform || "all");
 
-  return store.contents.filter((item) => {
+  return db.contents.filter((item) => {
     const matchedPlatform = platform === "all" || item.platform === platform;
     const haystack = [item.title, item.author, item.platform, item.tags.join(" ")].join(" ").toLowerCase();
     const matchedKeyword = !keyword || haystack.includes(keyword);
@@ -40,7 +40,7 @@ function buildLatestItems(platform, count = 10) {
 }
 
 function getPlatformReview(platform) {
-  return store.merchantOnboarding.platforms.find((item) => item.platform === platform) || null;
+  return db.merchantOnboarding.platforms.find((item) => item.platform === platform) || null;
 }
 
 function platformSearchState(platform) {
@@ -60,7 +60,7 @@ function platformSearchState(platform) {
     }
   }
   const review = getPlatformReview(platform);
-  if (store.session.userType !== "merchant") {
+  if (db.session.userType !== "merchant") {
     return {
       platform,
       platformName: platformName(platform),
@@ -161,7 +161,7 @@ export function importContent(payload) {
   }
 
   const item = {
-    id: `vid_${store.contents.length + 1}_${Date.now()}`,
+    id: `vid_${db.contents.length + 1}_${Date.now()}`,
     platform,
     title,
     author: `${platformName(platform)}导入`,
@@ -171,6 +171,7 @@ export function importContent(payload) {
     tags: ["手动导入"],
     status: "draft"
   };
-  store.contents.unshift(item);
+  db.contents.unshift(item);
   return item;
 }
+

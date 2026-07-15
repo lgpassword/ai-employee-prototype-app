@@ -108,6 +108,9 @@ Merchant / 商户用户: merchant / merchant123
 │   ├── server.js
 │   ├── store.js
 │   ├── db/
+│   │   ├── index.js
+│   │   ├── state.js
+│   │   └── json-store.js
 │   ├── modules/
 │   └── services/
 ├── .gitignore
@@ -157,6 +160,8 @@ Why:
 - `.env`: local API keys and secrets.
 
 当前过渡持久化层会在服务启动时读取 `.local/store.json`，并在 API 请求结束后保存业务状态。全局登录 `session` 不会写入快照。
+
+后端业务模块统一通过 `src/db/index.js` 调用数据，`src/db/state.js` 只保存当前运行时状态和默认演示数据，`src/store.js` 仅保留为旧路径兼容层。
 
 ## AI Provider Configuration / AI 供应商配置
 

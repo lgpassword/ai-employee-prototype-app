@@ -1,4 +1,4 @@
-import { store } from "../store.js";
+import { db } from "../db/index.js";
 
 // AI 设置模块：对应原型“AI设置”，当前闭环为保存企业知识库文本。
 export const videoProviderOptions = [
@@ -95,32 +95,32 @@ function maskedVoiceStatus(config) {
 
 export function getSettings() {
   return {
-    knowledgeBase: store.settings.knowledgeBase,
+    knowledgeBase: db.settings.knowledgeBase,
     customerAi: {
-      enabled: Boolean(store.settings.customerAi?.enabled),
-      provider: store.settings.customerAi?.provider || "textProvider",
-      tone: store.settings.customerAi?.tone || "专业、亲和、成交导向",
-      replyDelaySeconds: Number(store.settings.customerAi?.replyDelaySeconds ?? 8),
-      escalationKeywords: store.settings.customerAi?.escalationKeywords || "",
-      platformSync: Boolean(store.settings.customerAi?.platformSync),
-      fallbackReply: store.settings.customerAi?.fallbackReply || ""
+      enabled: Boolean(db.settings.customerAi?.enabled),
+      provider: db.settings.customerAi?.provider || "textProvider",
+      tone: db.settings.customerAi?.tone || "专业、亲和、成交导向",
+      replyDelaySeconds: Number(db.settings.customerAi?.replyDelaySeconds ?? 8),
+      escalationKeywords: db.settings.customerAi?.escalationKeywords || "",
+      platformSync: Boolean(db.settings.customerAi?.platformSync),
+      fallbackReply: db.settings.customerAi?.fallbackReply || ""
     },
     videoProviderOptions,
-    videoProvider: maskedStatus(store.settings.videoProvider),
+    videoProvider: maskedStatus(db.settings.videoProvider),
     textProviderOptions,
-    textProvider: maskedTextStatus(store.settings.textProvider),
+    textProvider: maskedTextStatus(db.settings.textProvider),
     voiceProviderOptions,
-    voiceProvider: maskedVoiceStatus(store.settings.voiceProvider)
+    voiceProvider: maskedVoiceStatus(db.settings.voiceProvider)
   };
 }
 
 export function saveKnowledgeBase(payload) {
-  store.settings.knowledgeBase = String(payload.knowledgeBase || "").trim();
+  db.settings.knowledgeBase = String(payload.knowledgeBase || "").trim();
   return getSettings();
 }
 
 export function saveCustomerAiSettings(payload) {
-  store.settings.customerAi = {
+  db.settings.customerAi = {
     enabled: Boolean(payload.enabled),
     provider: String(payload.provider || "textProvider").trim(),
     tone: String(payload.tone || "专业、亲和、成交导向").trim(),
@@ -133,9 +133,9 @@ export function saveCustomerAiSettings(payload) {
 }
 
 export function saveVideoProviderSettings(payload) {
-  const provider = String(payload.provider || store.settings.videoProvider.provider || "openai");
+  const provider = String(payload.provider || db.settings.videoProvider.provider || "openai");
   const option = providerOption(provider);
-  const current = store.settings.videoProvider;
+  const current = db.settings.videoProvider;
   const providerChanged = current.provider !== option.value;
   const nextModel = String(payload.model || "").trim();
   current.provider = option.value;
@@ -162,9 +162,9 @@ export function saveVideoProviderSettings(payload) {
 }
 
 export function saveTextProviderSettings(payload) {
-  const provider = String(payload.provider || store.settings.textProvider.provider || "local");
+  const provider = String(payload.provider || db.settings.textProvider.provider || "local");
   const option = textProviderOption(provider);
-  const current = store.settings.textProvider;
+  const current = db.settings.textProvider;
   const providerChanged = current.provider !== option.value;
   const payloadModel = String(payload.model || "").trim();
   const invalidCarriedLocalModel = option.value !== "local" && payloadModel === "local-rules";
@@ -185,9 +185,9 @@ export function saveTextProviderSettings(payload) {
 }
 
 export function saveVoiceProviderSettings(payload) {
-  const provider = String(payload.provider || store.settings.voiceProvider.provider || "local");
+  const provider = String(payload.provider || db.settings.voiceProvider.provider || "local");
   const option = voiceProviderOption(provider);
-  const current = store.settings.voiceProvider;
+  const current = db.settings.voiceProvider;
   const providerChanged = current.provider !== option.value;
   const payloadModel = String(payload.model || "").trim();
   const payloadEndpoint = String(payload.endpoint || "").trim();
@@ -213,7 +213,7 @@ export function saveVoiceProviderSettings(payload) {
 }
 
 export function getVoiceProviderConfig() {
-  const config = store.settings.voiceProvider;
+  const config = db.settings.voiceProvider;
   const option = voiceProviderOption(config.provider);
   const envConfig = {
     local: {},
@@ -254,7 +254,7 @@ export function getVoiceProviderConfig() {
 }
 
 export function getTextProviderConfig() {
-  const config = store.settings.textProvider;
+  const config = db.settings.textProvider;
   const option = textProviderOption(config.provider);
   const envConfig = {
     local: {},
@@ -288,7 +288,7 @@ export function getTextProviderConfig() {
 }
 
 export function getVideoProviderConfig() {
-  const config = store.settings.videoProvider;
+  const config = db.settings.videoProvider;
   const option = providerOption(config.provider);
   const envConfig = {
     openai: {
@@ -346,3 +346,4 @@ export function getVideoProviderConfig() {
   merged.configured = option.keyMode === "apiKey" ? Boolean(merged.apiKey) : Boolean(merged.accessKey && merged.secretKey);
   return merged;
 }
+

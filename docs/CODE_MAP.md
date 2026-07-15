@@ -27,13 +27,15 @@ This document explains what each source file contains, what it does, and which b
 | File | Contains | Role | Main Flow |
 | --- | --- | --- | --- |
 | `src/server.js` | HTTP server, static file serving, JSON helpers, API route dispatch. | Connects frontend requests to business modules. | All API flows, session guard, platform messaging routes. |
-| `src/store.js` | In-memory users, accounts, settings, conversations, dashboards, platform onboarding data. | Local data store for the prototype. | Session, quota, platform data, customer messages. |
+| `src/store.js` | Compatibility re-export for the old store path. | Keeps older imports from breaking while new modules use `src/db/index.js`. | Transitional migration only. |
 
 ## Data Layer / 数据层
 
 | File | Contains | Role | Main Flow |
 | --- | --- | --- | --- |
-| `src/db/json-store.js` | Local JSON snapshot loader/saver, deep merge helper, persistence status. | Transitional persistence layer before SQLite/PostgreSQL repository migration. | Server startup loads `.local/store.json`; API responses save business state without persisting global session. |
+| `src/db/index.js` | Database facade, state proxy, ID generation, platform display helper. | Single call entry for business modules that need data. | Backend modules call `db.*`, `nextId()`, and `platformName()` from here. |
+| `src/db/state.js` | Runtime users, accounts, settings, conversations, dashboards, platform onboarding data. | Current in-process database state and default seed data. | Session, quota, platform data, customer messages. |
+| `src/db/json-store.js` | Local JSON snapshot loader/saver, deep merge helper, persistence status. | Transitional persistence adapter before SQLite/PostgreSQL repository migration. | Server startup loads `.local/store.json`; API responses save business state without persisting global session. |
 
 ## Backend Modules / 后端业务模块
 
@@ -79,7 +81,7 @@ This document explains what each source file contains, what it does, and which b
 
 ### 1. Login and Access / 登录与额度
 
-`public/app.js` -> `POST /api/session/login` -> `src/modules/onboarding.js` -> `src/store.js` -> `src/db/json-store.js`
+`public/app.js` -> `POST /api/session/login` -> `src/modules/onboarding.js` -> `src/db/index.js` -> `src/db/state.js` -> `src/db/json-store.js`
 
 ### 2. Content Search / 内容搜索
 
@@ -93,7 +95,7 @@ This document explains what each source file contains, what it does, and which b
 
 Inbound platform message:
 
-`POST /api/platform-messaging/inbound` -> `src/modules/messages.js` -> `src/store.js`
+`POST /api/platform-messaging/inbound` -> `src/modules/messages.js` -> `src/db/index.js` -> `src/db/state.js`
 
 Outbound reply:
 
