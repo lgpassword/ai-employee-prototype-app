@@ -1,4 +1,5 @@
 import { db, platformName } from "../db/index.js";
+import { searchKnowledge } from "./knowledge.js";
 
 // 客户消息模块：对应客户消息页，闭环包含平台消息接收、发送回复、AI 建议和本地适配器同步状态。
 
@@ -286,8 +287,20 @@ export function buildAutoReplySuggestion(id) {
     throw new Error("会话不存在");
   }
   const config = db.settings.customerAi || {};
-  const knowledge = db.settings.knowledgeBase ? `结合企业知识库：${db.settings.knowledgeBase.slice(0, 80)}` : "结合当前商品卖点";
+  const sources = searchKnowledge(conversation.lastMessage, 3);
+  const risky = String(config.escalationKeywords || "").split(/[，,]/).map((item) => item.trim()).filter(Boolean).some((keyword) => conversation.lastMessage.includes(keyword));
+  const knowledge = sources.length
+    ? `依据：${sources.map((item) => item.title).join(" / ")}`
+    : "依据：当前商品卖点";
   conversation.aiSuggestion = `${config.tone || "专业、亲和"}回复：${knowledge}。针对客户“${conversation.lastMessage}”，先直接回答问题，再引导确认尺码、数量或收货场景。`;
+  conversation.aiEvidence = sources.map((item) => ({
+    id: item.id,
+    title: item.title,
+    type: item.type,
+    excerpt: String(item.content || "").slice(0, 120)
+  }));
+  conversation.aiRisk = risky ? "high" : "low";
+  conversation.aiNextAction = risky ? "建议转人工或审批后发送" : "可编辑后发送";
   conversation.status = "ai_drafting";
   return conversation;
 }

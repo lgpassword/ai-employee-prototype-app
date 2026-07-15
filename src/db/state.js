@@ -18,8 +18,9 @@ export const store = {
     {
       id: "usr_admin",
       username: "admin",
-      // 本地原型账号使用明文密码；正式系统需要替换为数据库用户和哈希密码。
-      password: "admin123",
+      passwordSalt: "1c88d2a04eab8fa1e1fd03bdd06ad697",
+      passwordHash: "7c8595762b9ba155e8d8a545288d976b217fb1c7f2061b5a2f8b943977033143",
+      passwordIterations: 120000,
       displayName: "系统管理员",
       userType: "merchant",
       role: "admin",
@@ -34,7 +35,9 @@ export const store = {
     {
       id: "usr_personal",
       username: "user",
-      password: "user123",
+      passwordSalt: "27ee940108a53a63c28b0199abb6da00",
+      passwordHash: "4746a088dac9bfc9cba52814b8733a2ff8889b26935d29cfca654bc248c4d512",
+      passwordIterations: 120000,
       displayName: "个人体验用户",
       userType: "personal",
       role: "user",
@@ -49,7 +52,9 @@ export const store = {
     {
       id: "usr_merchant",
       username: "merchant",
-      password: "merchant123",
+      passwordSalt: "15ba7c8d89a5756253dd4149ec6d6ee7",
+      passwordHash: "876655e8911adafe3f18c1e48931ac26ee4334993e981397f18316c2bac32050",
+      passwordIterations: 120000,
       displayName: "商户体验账号",
       userType: "merchant",
       role: "merchant",
@@ -100,6 +105,31 @@ export const store = {
   ],
   generatedVideos: [],
   videoRenderJobs: [],
+  tasks: [],
+  taskSteps: [],
+  agentRuns: [],
+  toolCalls: [],
+  approvalRequests: [],
+  costRecords: [],
+  knowledgeEntries: [
+    {
+      id: "kb_glove_faq",
+      type: "faq",
+      title: "防护手套常见问题",
+      content: "专业防护手套主打防滑、耐磨、透气，适合工厂作业、户外搬运、骑行和日常防护。批量采购可提供阶梯报价。",
+      tags: ["手套", "防滑", "耐磨", "批发"],
+      updatedAt: "2026-07-15T00:00:00.000Z"
+    },
+    {
+      id: "kb_after_sales",
+      type: "policy",
+      title: "售后与物流政策",
+      content: "常规尺码现货充足，满 2 件默认包邮。质量问题、投诉、退款和差评需要升级人工或进入审批。",
+      tags: ["售后", "物流", "退款", "投诉"],
+      updatedAt: "2026-07-15T00:00:00.000Z"
+    }
+  ],
+  platformSyncRecords: [],
   conversations: [
     {
       id: "conv_1",

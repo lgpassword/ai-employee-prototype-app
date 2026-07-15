@@ -45,6 +45,8 @@ let session = { userType: null };
 let currentVideoDraft = null;
 /** Active AI video tab key. / AI 视频工作台当前标签页。 */
 let activeVideoTab = "script";
+/** Cached async AI video render jobs. / AI 视频异步渲染任务缓存。 */
+let currentVideoRenderJobs = [];
 /** Scenario analysis result for video copy. / 文案使用场景分析结果。 */
 let scenarioAnalysis = null;
 /** Selected usage scenarios used by script generation. / 用户选择并用于脚本生成的使用场景。 */
@@ -781,6 +783,52 @@ function renderTaskDetails(task) {
   `;
 }
 
+function renderVideoRenderJobs(jobs = []) {
+  return `
+    <div class="ai-section video-job-board">
+      <div class="tab-title-row">
+        <div>
+          <h4>异步生成任务</h4>
+          <p>展示后台视频生成状态、失败重试入口和成本统计占位。</p>
+        </div>
+        <button class="filter-tab" data-refresh-ai-video type="button">刷新任务</button>
+      </div>
+      ${jobs.length ? `
+        <div class="storyboard-table">
+          <div class="storyboard-row storyboard-row-head">
+            <span>任务</span><span>草稿</span><span>状态</span><span>成本</span><span>操作</span>
+          </div>
+          ${jobs.slice(0, 8).map((job) => `
+            <div class="storyboard-row">
+              <strong>${escapeHtml(job.id)}</strong>
+              <span>${escapeHtml(job.draftId)}</span>
+              <span>${escapeHtml(job.status)}</span>
+              <span>${escapeHtml(job.result?.costText || "待统计")}</span>
+              <span>${job.status === "failed" ? `<button class="filter-tab" data-retry-render-job="${escapeHtml(job.id)}" type="button">重试</button>` : escapeHtml(job.error || job.finishedAt || job.startedAt || "等待")}</span>
+            </div>
+          `).join("")}
+        </div>
+      ` : `
+        <div class="empty-workbench">
+          <strong>暂无后台生成任务</strong>
+          <p>确认脚本和分镜后，生成任务会进入这里。</p>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+async function retryRenderJob(id) {
+  const { item } = await api(`/api/videos/render-jobs/${encodeURIComponent(id)}`);
+  if (!item?.payload) throw new Error("任务缺少可重试参数");
+  await api("/api/videos/render-jobs", {
+    method: "POST",
+    body: JSON.stringify(item.payload)
+  });
+  await renderAiVideo();
+  setStatus("已重新加入视频生成队列");
+}
+
 function refreshVideoWorkspace() {
   if (!currentVideoDraft) return;
   const preview = $("#videoPreview");
@@ -940,9 +988,9 @@ async function confirmRenderVideo() {
   const button = $("#confirmRenderButton");
   button.disabled = true;
   button.textContent = "生成中...";
-  setStatus("正在生成视频与声音，请稍等");
+  setStatus("正在创建后台视频生成任务");
   try {
-    const result = await api("/api/videos/render", {
+    const result = await api("/api/videos/render-jobs", {
       method: "POST",
       body: JSON.stringify({
         ...plan,
@@ -951,12 +999,13 @@ async function confirmRenderVideo() {
       })
     });
     await refreshSession({ navigate: false });
-    currentVideoDraft = result.item;
+    currentVideoRenderJobs = [result.item, ...currentVideoRenderJobs];
     activeVideoTab = "result";
-    document.querySelector(".flow-steps").outerHTML = renderFlowSteps("done");
+    document.querySelector(".flow-steps").outerHTML = renderFlowSteps("render");
     refreshVideoWorkspace();
     closeRenderModal();
-    setStatus("视频与声音已生成");
+    await renderAiVideo();
+    setStatus("视频生成任务已进入后台队列");
   } finally {
     button.disabled = false;
     button.textContent = "确认生成";
@@ -1693,6 +1742,17 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const retryRenderJobButton = event.target.closest("[data-retry-render-job]");
+  if (retryRenderJobButton) {
+    retryRenderJob(retryRenderJobButton.dataset.retryRenderJob).catch((error) => setStatus(error.message));
+    return;
+  }
+
+  if (event.target.closest("[data-refresh-ai-video]")) {
+    renderAiVideo().catch((error) => setStatus(error.message));
+    return;
+  }
+
   const toggle = event.target.closest("[data-toggle-account]");
   if (toggle) {
     api(`/api/accounts/${toggle.dataset.toggleAccount}/toggle`, { method: "POST" })
@@ -1751,6 +1811,8 @@ function renderFlowSteps(activeKey) {
 async function renderAiVideo() {
   const extractedCopy = sessionStorage.getItem("extractedCopy") || "";
   const settings = await api("/api/settings");
+  const jobsPayload = await api("/api/videos/render-jobs");
+  currentVideoRenderJobs = jobsPayload.items || [];
   $("#mainContent").innerHTML = `
     ${renderSectionHeader("AI 视频生成", '<button class="filter-tab" data-open-ai-video-config type="button">配置模型</button>')}
     ${renderFlowSteps("copy")}
@@ -1798,6 +1860,7 @@ async function renderAiVideo() {
         </div>
       </div>
     </div>
+    ${renderVideoRenderJobs(currentVideoRenderJobs)}
   `;
   sessionStorage.removeItem("extractedCopy");
   scenarioAnalysis = null;

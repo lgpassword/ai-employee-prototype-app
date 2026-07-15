@@ -1,4 +1,5 @@
 import { db } from "../db/index.js";
+import { pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
 
 const quotaLabels = {
   contentSearches: "内容搜索",
@@ -30,6 +31,31 @@ function findUserByUsername(username) {
 
 function findUserById(userId) {
   return db.users.find((item) => item.id === userId);
+}
+
+function hashPassword(password, salt, iterations = 120000) {
+  return pbkdf2Sync(String(password), salt, iterations, 32, "sha256").toString("hex");
+}
+
+function applyPasswordHash(user, password) {
+  const salt = randomBytes(16).toString("hex");
+  user.passwordSalt = salt;
+  user.passwordIterations = 120000;
+  user.passwordHash = hashPassword(password, salt, user.passwordIterations);
+  delete user.password;
+}
+
+function verifyPassword(user, password) {
+  if (user?.passwordHash && user?.passwordSalt) {
+    const expected = Buffer.from(user.passwordHash, "hex");
+    const actual = Buffer.from(hashPassword(password, user.passwordSalt, Number(user.passwordIterations || 120000)), "hex");
+    return expected.length === actual.length && timingSafeEqual(expected, actual);
+  }
+  if (user?.password && user.password === password) {
+    applyPasswordHash(user, password);
+    return true;
+  }
+  return false;
 }
 
 function isExpired(user) {
@@ -137,7 +163,7 @@ export function login(payload) {
   if (!username || !password) {
     throw new Error("请输入账号和密码");
   }
-  if (!user || user.password !== password) {
+  if (!user || !verifyPassword(user, password)) {
     throw new Error("账号或密码不正确");
   }
   if (expectedUserType && user.userType !== expectedUserType) {

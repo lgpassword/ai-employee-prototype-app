@@ -14,7 +14,11 @@ import { getSettings, saveCustomerAiSettings, saveKnowledgeBase, saveTextProvide
 import { listProducts, getProductDetail } from "./modules/products.js";
 import { listCreators, getCreatorDetail, startCooperation } from "./modules/creators.js";
 import { getOperationsDashboard } from "./modules/analytics.js";
+import { approveRequest, listApprovalRequests, rejectRequest } from "./modules/approvals.js";
 import { getContentInsights, createPublishPlan, triggerPublishPlan } from "./modules/publishing.js";
+import { getAgentActivityLog, createAgentTask, getTask, listTasks } from "./modules/tasks.js";
+import { listKnowledgeEntries, searchKnowledge, upsertKnowledgeEntry } from "./modules/knowledge.js";
+import { getPlatformCapabilityMatrix, listPlatformSyncRecords, recordPlatformSync } from "./modules/platforms.js";
 import { getOrderInventoryDashboard, getOrderDetail, markOrderShipped } from "./modules/orders.js";
 import { getFinanceDashboard } from "./modules/finance.js";
 import { addTeamMember, getTeamDashboard, updateMemberRole } from "./modules/team.js";
@@ -228,6 +232,35 @@ const server = createServer(async (req, res) => {
       sendJson(res, 200, { item: await renderVideoWithVoice(await readJson(req)) });
       return;
     }
+    if (req.method === "GET" && url.pathname === "/api/tasks") {
+      sendJson(res, 200, { items: listTasks() });
+      return;
+    }
+    if (req.method === "POST" && url.pathname === "/api/tasks") {
+      sendJson(res, 201, { item: createAgentTask(await readJson(req)) });
+      return;
+    }
+    if (req.method === "GET" && url.pathname.match(/^\/api\/tasks\/[^/]+$/)) {
+      const item = getTask(url.pathname.split("/").pop());
+      sendJson(res, item ? 200 : 404, item ? { item } : { error: "not_found" });
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/api/agent-logs") {
+      sendJson(res, 200, { items: getAgentActivityLog() });
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/api/approvals") {
+      sendJson(res, 200, { items: listApprovalRequests() });
+      return;
+    }
+    if (req.method === "POST" && url.pathname.match(/^\/api\/approvals\/[^/]+\/approve$/)) {
+      sendJson(res, 200, { item: approveRequest(url.pathname.split("/")[3], await readJson(req)) });
+      return;
+    }
+    if (req.method === "POST" && url.pathname.match(/^\/api\/approvals\/[^/]+\/reject$/)) {
+      sendJson(res, 200, { item: rejectRequest(url.pathname.split("/")[3], await readJson(req)) });
+      return;
+    }
     if (req.method === "GET" && url.pathname === "/api/conversations") {
       sendJson(res, 200, { items: listConversations() });
       return;
@@ -273,6 +306,18 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "GET" && url.pathname === "/api/accounts") {
       sendJson(res, 200, { items: listAccounts() });
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/api/platforms/capabilities") {
+      sendJson(res, 200, { items: getPlatformCapabilityMatrix() });
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/api/platforms/sync-records") {
+      sendJson(res, 200, { items: listPlatformSyncRecords() });
+      return;
+    }
+    if (req.method === "POST" && url.pathname === "/api/platforms/sync-records") {
+      sendJson(res, 201, { item: recordPlatformSync(await readJson(req)) });
       return;
     }
     if (req.method === "POST" && url.pathname === "/api/accounts") {
@@ -392,6 +437,18 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "GET" && url.pathname === "/api/settings") {
       sendJson(res, 200, getSettings());
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/api/knowledge") {
+      sendJson(res, 200, { items: listKnowledgeEntries() });
+      return;
+    }
+    if (req.method === "POST" && url.pathname === "/api/knowledge") {
+      sendJson(res, 201, { item: upsertKnowledgeEntry(await readJson(req)) });
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/api/knowledge/search") {
+      sendJson(res, 200, { items: searchKnowledge(url.searchParams.get("q") || "") });
       return;
     }
     if (req.method === "POST" && url.pathname === "/api/settings/knowledge-base") {

@@ -1,5 +1,24 @@
+import { db } from "../db/index.js";
+
+function aiTaskRoi() {
+  const taskCount = (db.tasks || []).length;
+  const completedCount = (db.tasks || []).filter((task) => task.status === "completed").length;
+  const modelCost = (db.costRecords || []).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const videoCount = (db.generatedVideos || []).filter((item) => item.renderTask).length;
+  const estimatedValue = completedCount * 38 + videoCount * 58;
+  return {
+    taskCount,
+    completedCount,
+    videoCount,
+    modelCost: Number(modelCost.toFixed(2)),
+    estimatedValue,
+    roi: modelCost ? Number((estimatedValue / modelCost).toFixed(2)) : estimatedValue
+  };
+}
+
 // 经营分析模块：提供经营看板、转化漏斗、平台占比和诊断建议。
 export function getOperationsDashboard() {
+  const roi = aiTaskRoi();
   return {
     metrics: {
       gmv: 1284200,
@@ -44,6 +63,12 @@ export function getOperationsDashboard() {
       { path: "短视频 → 商品详情 → 下单", percent: 36 },
       { path: "直播间 → 咨询 → 下单", percent: 28 },
       { path: "搜索 → 商品详情 → 加购 → 支付", percent: 18 }
+    ],
+    aiRoi: roi,
+    aiSuggestions: [
+      { title: "AI 任务价值", detail: `已完成 ${roi.completedCount}/${roi.taskCount} 个 AI 任务，估算产出 ¥${roi.estimatedValue}。` },
+      { title: "模型成本", detail: `当前记录成本 ¥${roi.modelCost}，ROI ${roi.roi}。` },
+      { title: "内容产能", detail: `已产出 ${roi.videoCount} 条可追踪视频，可继续关联发布和成交数据。` }
     ]
   };
 }

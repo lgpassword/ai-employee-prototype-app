@@ -28,6 +28,19 @@
 | `GET` | `/api/videos/render-jobs` | `video.js` | List asynchronous video render jobs. |
 | `GET` | `/api/videos/render-jobs/:id` | `video.js` | Read one asynchronous video render job. |
 | `POST` | `/api/videos/render-jobs` | `video.js` | Queue asynchronous video rendering and return immediately. |
+| `GET` | `/api/tasks` | `tasks.js` | List AI employee tasks. |
+| `POST` | `/api/tasks` | `tasks.js` | Create an AI employee task with steps, tool calls, cost record, and optional approval. |
+| `GET` | `/api/tasks/:id` | `tasks.js` | Read task detail with steps, approvals, tool calls, and costs. |
+| `GET` | `/api/agent-logs` | `tasks.js` | List AI tool calls and cost records. |
+| `GET` | `/api/approvals` | `approvals.js` | List pending and decided approval requests. |
+| `POST` | `/api/approvals/:id/approve` | `approvals.js` | Approve one high-risk AI action. |
+| `POST` | `/api/approvals/:id/reject` | `approvals.js` | Reject one high-risk AI action. |
+| `GET` | `/api/knowledge` | `knowledge.js` | List structured knowledge entries. |
+| `POST` | `/api/knowledge` | `knowledge.js` | Create or update one structured knowledge entry. |
+| `GET` | `/api/knowledge/search` | `knowledge.js` | Search knowledge entries for RAG-style evidence. |
+| `GET` | `/api/platforms/capabilities` | `platforms.js` | Read platform capability matrix. |
+| `GET` | `/api/platforms/sync-records` | `platforms.js` | List platform synchronization records. |
+| `POST` | `/api/platforms/sync-records` | `platforms.js` | Record one platform synchronization event. |
 | `POST` | `/api/scenarios/analyze` | `scenario-research.js` | Analyze product usage scenarios. |
 
 ## Customer Messaging / 客户消息
